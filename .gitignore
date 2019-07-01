@@ -1,7 +1,10 @@
-/src/__pycache__
-/tests/__pycache__
 /equations
 /.cache/
 
-.so
+/src/__pycache__
 
+/fort_src/.so
+
+
+/tests/__pycache__
+/tests/test_sequence

@@ -1,0 +1,187 @@
+      Subroutine ThermalCISD(E0,ERI,T1,T2,NA,X,Y,R0,R1,R2)
+          Implicit None
+
+          Integer, parameter  :: pr = Selected_Real_Kind(15,307)
+          Integer, Intent(In) :: NA
+          Real (Kind=pr), Intent(In) :: X(NA), Y(NA)
+          Real (Kind=pr), Intent(In) :: T1(NA,NA), T2(NA,NA,NA,NA)
+          Real (Kind=pr), Intent(In) :: E0(NA), ERI(NA,NA,NA,NA)
+          Real (Kind=pr), Intent(Out) :: R0
+          Real (Kind=pr), Intent(Out) :: R1(NA,NA)
+          Real (Kind=pr), Intent(Out) :: R2(NA,NA,NA,NA)
+          Integer :: a, b, c, d, i, j
+
+          Real (Kind=pr) :: tau0
+          Real (Kind=pr) :: tau1
+          Real (Kind=pr), dimension(:), allocatable :: tau2
+          Real (Kind=pr) :: tau3
+          Real (Kind=pr) :: tau4
+          Real (Kind=pr), dimension(:, :, :, :), allocatable :: tau5
+          Real (Kind=pr), dimension(:, :, :, :), allocatable :: tau7
+          Real (Kind=pr), dimension(:, :, :, :), allocatable :: tau8
+          Real (Kind=pr), dimension(:, :, :, :), allocatable :: tau9
+          Real (Kind=pr), dimension(:, :, :, :), allocatable :: tau10
+          Real (Kind=pr), dimension(:, :, :, :), allocatable :: tau11
+
+          ! Pre Processing
+          ! Defining the Hamiltonian Matrix Elements
+
+          Real (Kind=pr) ::  h0, h20(na,na), h02(na,na), h11(na,na)
+          Real (Kind=pr) ::  h40(na,na,na,na), h04(na,na,na,na)
+          Real (Kind=pr) ::  h31(na,na,na,na), h13(na,na,na,na)
+          Real (Kind=pr) ::  h221(na,na,na,na)
+          Real (Kind=pr) ::  h222(na,na,na,na)
+          Real (Kind=pr) ::  scr1(na), scr2(na,na), delK(na,na)
+
+          h0 = Sum(y*y*e0)
+          delK = 0.0_pr
+
+          do a=1, na
+              delK(a,a) = 1.0_pr
+              do b=1, na
+                  scr2(a,b) = 0.0_pr
+                  do c=1,na
+                      scr1(c) = eri(a,c,b,c)
+                  end do
+                  scr2(a,b) = Sum(y*y*scr1)
+                  h0 = h0 + ( y(a)**2 * y(b)**2 * eri(a,b,a,b) )/2
+              end do
+              scr2(a,a) = scr2(a,a) + e0(a)
+          end do
+
+          do a=1, na
+              do b=1, na
+                  h20(a,b) = x(a)*x(b)*scr2(a,b)
+                  h02(a,b) = -y(a)*y(b)*scr2(a,b)
+                  h11(a,b) = x(a)*y(b)*scr2(a,b)
+                  do c=1, na
+                      do d=1, na
+                          h40(a,b,c,d) = eri(a,b,c,d)*x(a)*x(b)*x(c)*x(d)/4.0
+                          h04(a,b,c,d) = eri(c,d,a,b)*y(a)*y(b)*y(c)*y(d)/4.0
+                          h31(a,b,c,d) = -eri(a,b,c,d)*x(a)*x(b)*y(c)*x(d)/2.0
+                          h13(a,b,c,d) = -eri(a,d,b,c)*x(a)*y(b)*y(c)*y(d)/2.0
+                          h221(a,b,c,d) = eri(a,b,c,d)*x(a)*x(b)*y(c)*y(d)/4.0
+                          h222(a,b,c,d) = eri(a,d,b,c)*x(a)*x(c)*y(b)*y(d)
+                      end do
+                  end do
+              end do
+          end do
+
+          tau0 = Sum(h11*t1)
+          tau1 = Sum(h221*t2)
+          
+          tau4 = tau0 + tau1
+          
+          allocate(tau2(1:na))
+
+          do a=1, na
+              scr1(a) = t1(a,a)
+          end do
+          
+          tau2 = y**2 - x*y*scr1
+          R0 = - (tau4/2) + Sum(e0*tau2)/2 - h0/2
+
+          deallocate(tau2)
+
+          tau3 = Sum(e0*x*y*scr1)
+          tau4 = tau4 + tau3
+          R1 = tau4*t1/2
+          R2 = tau4*t2/2
+
+          allocate(tau5(1:na, 1:na, 1:na, 1:na))
+          allocate(tau7(1:na, 1:na, 1:na, 1:na))
+          allocate(tau8(1:na, 1:na, 1:na, 1:na))
+          allocate(tau9(1:na, 1:na, 1:na, 1:na))
+          allocate(tau10(1:na, 1:na, 1:na, 1:na))
+          allocate(tau11(1:na, 1:na, 1:na, 1:na))
+
+          tau5 = 0.0_pr
+          tau7 = 0.0_pr
+          tau8 = 0.0_pr
+          tau9 = 0.0_pr
+          tau10 = 0.0_pr
+          tau11 = 0.0_pr
+
+          !$omp parallel default(shared)
+          !$omp do schedule(static)
+          do a=1, na
+              do b=1, na
+                  do c=1, na
+                      do d=1, na
+                          tau5(a,b,c,d) = Sum(&
+                              h222(a,b,:,:)*t2(:,c,:,d)&
+                              ) + h11(a,b)*t1(c,d)
+                          tau7(a,b,c,d) = Sum(t1(d,:)*h13(a,b,c,:))
+                          tau8(a,b,c,d) = Sum(t1(:,d)*h31(a,b,c,:))
+                          tau9(a,b,c,d) = Sum(h02(:,a)*t2(b,c,:,d))
+                          tau10(a,b,c,d) = Sum(h20(:,a)*t2(:,b,c,d))
+                          tau11(a,b,c,d) = delK(a,d)*t1(c,b)-delK(a,b)*t1(c,d)
+                      end do
+                  end do
+              end do
+          end do
+          !$omp end do
+          !$omp end parallel
+
+          !$omp parallel default(shared)
+          !$omp do schedule(static)
+          do a=1, na
+              do b=1, na
+                  R2(a,b,:,:) = R2(a,b,:,:) - (&
+                      tau5(a,:,b,:) - Transpose(tau5(a,:,b,:)) -&
+                      tau5(b,:,a,:) + Transpose(tau5(b,:,a,:))&
+                      )/2 
+                  R2(a,b,:,:) = R2(a,b,:,:) + (&
+                      tau7(b,:,:,a) - tau7(a,:,:,b)&
+                      ) 
+                  R2(a,b,:,:) = R2(a,b,:,:) + (&
+                      tau8(a,b,:,:) - Transpose(tau8(a,b,:,:))&
+                      )
+                  R2(a,b,:,:) = R2(a,b,:,:) - (&
+                      tau9(:,a,b,:) - Transpose(tau9(:,a,b,:))&
+                      )/2
+                  R2(a,b,:,:) = R2(a,b,:,:) - (&
+                      tau10(a,b,:,:) - tau10(b,a,:,:)&
+                      )/2
+                  R2(a,b,:,:) = R2(a,b,:,:) - e0(a)*x(a)*y(a)*(&
+                      tau11(a,:,b,:))/2 - e0(b)*x(b)*y(b)*(&
+                      Transpose(tau11(b,:,a,:))/2)
+
+                  do c=1, na
+                      do d=1, na
+                          R2(a,b,c,d) = R2(a,b,c,d) - Sum(&
+                              h04(:,:,c,d)*t2(a,b,:,:)) - Sum(&
+                              h40(:,:,a,b)*t2(:,:,c,d))
+                      end do
+                  end do
+              end do
+          end do
+          !$omp end do
+          !$omp end parallel
+
+          deallocate(tau5,tau7,tau8,tau9,tau10,tau11)
+
+          R1 = R1 - h11/2 - MatMul(t1,h02)/2 - MatMul(Transpose(h20),t1)/2
+
+          do a=1, na
+              do b=1, na
+                  do c=1, na
+                      R1(a, b) = R1(a, b) - ( &
+                          e0(c) * x(c) * y(c) * t2(c, a, c, b) / 2&
+                      )
+                  end do
+                  R1(a, b) = R1(a, b) + ( &
+                      delK(a, b) * e0(a) * x(a) * y(a) / 2&
+                  )
+                  R1(a,b) = R1(a,b) + Sum(h31(:,:,:,a)*t2(:,:,:,b))/2 &
+                      - Sum(h13(:,:,:,b)*t2(:,a,:,:))/2 &
+                      - Sum(h11*t2(:,a,:,b))/2 &
+                      - Sum(t1*h222(a,b,:,:))/2
+              end do
+          end do
+
+          R2 = R2 - 2*h221
+
+
+      End Subroutine ThermalCISD
+
