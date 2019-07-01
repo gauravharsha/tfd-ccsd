@@ -3,8 +3,9 @@
 
 /src/__pycache__
 
-/fort_src/.so
+/fort_src/*.so
 
 
 /tests/__pycache__
 /tests/test_sequence
+/tests/.cache/
