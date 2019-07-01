@@ -24,6 +24,7 @@ class IOps:
 
         # Initialize the variables
         self.fn = ''
+        self.nso = 0
         self.n_elec = 0.0
         self.beta_f = 0.0
         self.beta_pts = 0
@@ -126,6 +127,9 @@ class IOps:
             print(attr_tup[0],' = ',attr_tup[1])
         print('----------------------------')
     
+        # Set the number of Spin orbitals
+        self.nso = np.size(h1,axis=0)
+
         # Close the HDF file
         f1.close()
         

@@ -1,2 +1,7 @@
 /src/__pycache__
 /tests/__pycache__
+/equations
+/.cache/
+
+.so
+

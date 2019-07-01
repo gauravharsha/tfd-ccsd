@@ -60,6 +60,9 @@ def test_readintegrals():
         else:
             pass
 
+    # Check the number of spin orbitals
+    assert iops.nso == 12
+
 def test_output():
 
     #
