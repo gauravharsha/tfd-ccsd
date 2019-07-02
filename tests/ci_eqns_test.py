@@ -65,8 +65,12 @@ def test_cc_residuals_zeroT():
                 m += 1
     t2 = np.einsum('ijab->abij',t2_pre)
 
+    # Transform the basis
+    s1 = np.transpose(evecs) @ t1 @ evecs
+    s2 = IntTran4(t2,evecs)
+
     # Convert CC to CI amps
-    t2 += np.einsum('ai,bj->abij',t1,t1)/2
+    s2 += np.einsum('ai,bj->abij',s1,s1)/2
 
     # Other parameters needed for residuals
     y = np.zeros(nso)
@@ -75,7 +79,8 @@ def test_cc_residuals_zeroT():
     x = np.sqrt(1 - y**2)
 
     # Get the residuals
-    r0, r1, r2 = thermalcisd(hdiag, eri, t1, t2, x, y)
+    r0, r1, r2 = thermalcisd(hdiag, eri, s1, s2, x, y)
+    print(np.max(np.abs(r2)))
 
     # First check the shapes of r0, r1, r2
     assert type(r0) == float
@@ -83,5 +88,9 @@ def test_cc_residuals_zeroT():
     assert np.shape(r2) == (nso,nso,nso,nso)
 
     # Compare with expected values (generated from Tom's MasterCode)
-    # assert np.max( np.abs( r1 ) ) <= 5e-8
+    # NOTE: Because T1 = 0 for Hubbard, the R1 = 0 for CI that we have constructed here
+    #       but R2 will not be zero as one needs to have up to 4th order wavefunction to
+    #       get CI equivalent of CC.
+
+    assert np.max( np.abs( r1 ) ) <= 5e-8
     # assert np.max( np.abs( r2 ) ) <= 5e-8
