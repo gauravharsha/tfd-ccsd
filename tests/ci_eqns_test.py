@@ -79,7 +79,7 @@ def test_cc_residuals_zeroT():
     x = np.sqrt(1 - y**2)
 
     # Get the residuals
-    r0, r1, r2 = thermalcisd(hdiag, eri, s1, s2, x, y)
+    r0, r1, r2 = betaci(hdiag, eri, s1, s2, x, y)
     print(np.max(np.abs(r2)))
 
     # First check the shapes of r0, r1, r2

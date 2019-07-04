@@ -1,4 +1,4 @@
-      Subroutine ThermalCISD(E0,ERI,T1,T2,NA,X,Y,R0,R1,R2)
+      Subroutine BetaCI(E0,ERI,T1,T2,NA,X,Y,R0,R1,R2)
           Implicit None
 
           Integer, parameter  :: pr = Selected_Real_Kind(15,307)
@@ -9,7 +9,7 @@
           Real (Kind=pr), Intent(Out) :: R0
           Real (Kind=pr), Intent(Out) :: R1(NA,NA)
           Real (Kind=pr), Intent(Out) :: R2(NA,NA,NA,NA)
-          Integer :: a, b, c, d, i, j
+          Integer :: a, b, c, d, i
 
           Real (Kind=pr) :: tau0
           Real (Kind=pr) :: tau1
@@ -183,5 +183,54 @@
           R2 = R2 - 2*h221
 
 
-      End Subroutine ThermalCISD
+      End Subroutine BetaCI
 
+      Subroutine NumberCI(T1, T2, NA, X, Y, R0, R1, R2)
+          Implicit None
+          Integer, parameter  :: pr = Selected_Real_Kind(15,307)
+          Integer, Intent(In) :: NA
+          Real (Kind=pr), Intent(In) :: X(NA), Y(NA)
+          Real (Kind=pr), Intent(In) :: T1(NA,NA)
+          Real (Kind=pr), Intent(In) :: T2(NA,NA,NA,NA)
+          Real (Kind=pr), Intent(Out) :: R1(NA,NA)
+          Real (Kind=pr), Intent(Out) :: R2(NA,NA,NA,NA)
+          Real (Kind=pr), Intent(Out) :: R0
+          Integer :: p,q,r,s
+
+          Real (Kind=pr)    ::  t1diag(na)
+
+          R0 = 0.0_pr
+          R1 = 0.0_pr
+          R2 = 0.0_pr
+
+          t1diag = 0.0_pr
+
+          do p=1, na
+              t1diag(p) = t1(p,p)
+          end do
+
+          R0 = Sum(x*y*t1diag)
+
+          !$omp parallel default(shared)
+          !$omp do schedule(static)
+          do p=1, na
+              do q=1, na
+                  R1(p,q) = t1(p,q) * ( x(p)**2 - y(q)**2 )/2.0_pr
+                  do r=1, na
+                      R1(p, q) = R1(p, q) + ( &
+                          -t1(r, r)*t1(p, q)*x(r)*y(r) + t2(r, p, r, q)*x(r)*y(r)&
+                      )
+                      do s=1, na
+
+                          R2(p,q,r,s) = R2(p,q,r,s) + t2(p,q,r,s)*(&
+                              x(p)**2 + x(q)**2 - y(r)**2 - y(s)**2)/2.0_pr -&
+                              Sum(x*y*t1diag)*t2(p,q,r,s)
+          
+                      end do
+                  end do
+              end do
+          end do
+          !$omp end do
+          !$omp end parallel
+
+      End Subroutine NumberCI

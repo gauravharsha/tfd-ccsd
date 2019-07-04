@@ -67,7 +67,7 @@ def test_cc_residuals_zeroT():
     x = np.sqrt(1 - y**2)
 
     # Get the residuals
-    r0, r1, r2 = thermalccsd(hdiag, eri, s1, s2, x, y)
+    r0, r1, r2 = betacc(hdiag, eri, s1, s2, x, y)
     r1 = np.einsum('pq,p,q->pq',r1,x,y)
     r2 = np.einsum('pqrs,p,q,r,s->pqrs',r2,x,x,y,y)
 

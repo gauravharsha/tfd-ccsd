@@ -1,4 +1,4 @@
-      Subroutine ThermalCCSD(E0, ERI, T1, T2, NA, X, Y, R0, R1, R2)
+      Subroutine BetaCC(E0, ERI, T1, T2, NA, X, Y, R0, R1, R2)
           Implicit None
           Integer, parameter  :: pr = Selected_Real_Kind(15,307)
           Integer, Intent(In) :: NA
@@ -9,7 +9,7 @@
           Real (Kind=pr), Intent(Out) :: R0
           Real (Kind=pr), Intent(Out) :: R1(NA,NA)
           Real (Kind=pr), Intent(Out) :: R2(NA,NA,NA,NA)
-          Integer :: a, b, c, d, i, j
+          Integer :: a, b, c, d, i
       
           Real (Kind=pr), dimension(:, :), allocatable :: tau0
           Real (Kind=pr), dimension(:, :), allocatable :: tau1
@@ -674,4 +674,51 @@
 
           r2 = r2 - eri/2.0_pr
 
-      End Subroutine ThermalCCSD
+      End Subroutine BetaCC
+
+      Subroutine NumberCC(S1, S2, NA, X, Y, R0, R1, R2)
+          Implicit None
+          Integer, parameter  :: pr = Selected_Real_Kind(15,307)
+          Integer, Intent(In) :: NA
+          Real (Kind=pr), Intent(In) :: X(NA), Y(NA)
+          Real (Kind=pr), Intent(In) :: S1(NA,NA)
+          Real (Kind=pr), Intent(In) :: S2(NA,NA,NA,NA)
+          Real (Kind=pr), Intent(Out) :: R1(NA,NA)
+          Real (Kind=pr), Intent(Out) :: R2(NA,NA,NA,NA)
+          Real (Kind=pr), Intent(Out) :: R0
+          Integer :: p,q,r,s
+
+          Real (Kind=pr)    ::  s1diag(na)
+
+         r0 = 0.0_pr
+         r1 = 0.0_pr
+         r2 = 0.0_pr
+
+         s1diag = 0.0_pr
+
+         do p=1, na
+             s1diag(p) = s1(p,p)
+         end do
+
+         !$omp parallel default(shared)
+         !$omp do schedule(static)
+         do p=1, na
+             do q=1, na
+                 r1(p,q) = -Sum(s1(:,q)*s1(p,:) * x**2 * y**2)
+                 do r=1, na
+                     r1(p, q) = r1(p, q) + s2(r, p, r, q)*x(r)**2*y(r)**2
+                     do s=1, na
+                         r2(p,q,r,s) = -Sum(s1(p,:)*s2(:,q,r,s)*x**2 * y**2) &
+                             - Sum(s1(q,:)*s2(p,:,r,s)* x**2 * y**2) &
+                             - Sum(s1(:,r)*s2(p,q,:,s)* x**2 * y**2) &
+                             - Sum(s1(:,s)*s2(p,q,r,:)* x**2 * y**2)
+                     end do
+                 end do
+             end do
+         end do
+         !$omp end do
+         !$omp end parallel
+
+         r0 = Sum(x**2 * y**2 * s1diag)
+
+     End Subroutine NumberCC
