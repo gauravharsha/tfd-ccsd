@@ -9,3 +9,5 @@
 /tests/__pycache__
 /tests/test_sequence
 /tests/.cache/
+/tests/test_output.h5
+

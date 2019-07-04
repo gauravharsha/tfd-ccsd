@@ -33,7 +33,7 @@ from ThermalCISD import *
 # We will test on 6 site Hubbard with U/t = 2.0
 # 
 
-def test_cc_residuals_zeroT():
+def test_ci_beta_residuals_zeroT():
 
     # 
     # Test to check the Coupled Cluster Residuals in the Zero Temperature Limit
@@ -94,3 +94,64 @@ def test_cc_residuals_zeroT():
 
     assert np.max( np.abs( r1 ) ) <= 5e-8
     # assert np.max( np.abs( r2 ) ) <= 5e-8
+
+def test_ci_beta_residuals_zeroT():
+
+    # 
+    # Test to check the Coupled Cluster Residuals in the Zero Temperature Limit
+    # 
+
+    # Load the Integrals first
+    iops = IOps(inp_file='TestInput')
+    h1, eri_in, attrs = iops.loadHDF()
+    nso = iops.nso
+
+    # Next do the IntTran2
+    hdiag, evecs = IntTran2(h1)
+    eri = IntTran4(eri_in,evecs)
+
+    # Construct random t1 and t2 = use Tom's MasterCode
+    nocc = 6
+    t1 = np.loadtxt('T1AMP')
+    t1_pre = np.zeros((nso,nso))
+    t1_pre[:nocc,nocc:] = t1[:,:]
+    t1 = np.einsum('ia->ai',t1_pre)
+
+    t2 = np.loadtxt('T2AMP')
+    t2_pre = eri_in*0
+    m = 0
+    for i in range(nocc):
+        for j in range(nocc):
+            for a in range(nocc):
+                t2_pre[i,j,nocc+a,nocc:] = t2[m,:]
+                m += 1
+    t2 = np.einsum('ijab->abij',t2_pre)
+
+    # Transform the basis
+    s1 = np.transpose(evecs) @ t1 @ evecs
+    s2 = IntTran4(t2,evecs)
+
+    # Convert CC to CI amps
+    s2 += np.einsum('ai,bj->abij',s1,s1)/2
+
+    # Other parameters needed for residuals
+    y = np.zeros(nso)
+    for i in range(nocc):
+        y[i] = 1.0
+    x = np.sqrt(1 - y**2)
+
+    # Get the residuals
+    r0, r1, r2 = numberci(s1, s2, x, y)
+    print(np.max(np.abs(r2)))
+
+    # First check the shapes of r0, r1, r2
+    assert type(r0) == float
+    assert np.shape(r1) == (nso,nso)
+    assert np.shape(r2) == (nso,nso,nso,nso)
+
+    # Compare with expected values -- for number operator as hamiltonian
+    #   these should all be zero
+
+    assert r0 == 0
+    assert np.max( np.abs( r1 ) ) <= 5e-8
+    assert np.max( np.abs( r2 ) ) <= 5e-8
