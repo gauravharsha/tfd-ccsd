@@ -67,10 +67,7 @@ def test_evolution_class_attributes():
 
     fug = iops.n_elec/(iops.nso-iops.n_elec)
     # Define the evolution class instance
-    evol = Evolution(
-        beta_step=0.1,alpha_step=0.1,n_elec=iops.n_elec,fug=fug,h1=hdiag,eri=eri_trans,
-        deqtol=iops.deqtol,ntol=iops.ntol
-    )
+    evol = Evolution(inp_file='TestInput')
 
     assert evol.beta_step == 0.1
     assert evol.alpha_step == 0.1
@@ -110,10 +107,7 @@ def test_evolution_class_beta_integration():
 
     fug = iops.n_elec/(iops.nso-iops.n_elec)
     # Define the evolution class instance
-    evol = Evolution(
-        beta_step=0.01,alpha_step=0.01,n_elec=iops.n_elec,fug=fug,h1=hdiag,eri=eri_trans,
-        deqtol=iops.deqtol,ntol=iops.ntol
-    )
+    evol = Evolution(inp_file='TestInput')
 
     # amplitudes -- before I set anything
     assert evol.cc_amps.all() == evol.ci_amps.all()
@@ -138,10 +132,7 @@ def test_evolution_class_eval_number():
 
     fug = iops.n_elec/(iops.nso-iops.n_elec)
     # Define the evolution class instance
-    evol = Evolution(
-        beta_step=0.01,alpha_step=0.01,n_elec=iops.n_elec,fug=fug,h1=hdiag,eri=eri_trans,
-        deqtol=iops.deqtol,ntol=iops.ntol
-    )
+    evol = Evolution(inp_file='TestInput')
 
     # amplitudes -- before I set anything
     assert evol.cc_amps.all() == evol.ci_amps.all()
@@ -170,10 +161,7 @@ def test_evolution_class_alpha_integration():
 
     fug = iops.n_elec/(iops.nso-iops.n_elec)
     # Define the evolution class instance
-    evol = Evolution(
-        beta_step=0.01,alpha_step=0.01,n_elec=iops.n_elec,fug=fug,h1=hdiag,eri=eri_trans,
-        deqtol=iops.deqtol,ntol=iops.ntol
-    )
+    evol = Evolution(inp_file='TestInput')
 
     # amplitudes -- before I set anything
     assert evol.cc_amps.all() == evol.ci_amps.all()

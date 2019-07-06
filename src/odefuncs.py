@@ -8,6 +8,7 @@ from scipy.misc import comb
 from multiprocessing import Pool
 
 from iofuncs import *
+from inttran import *
 
 from ThermalCCSD import *
 from ThermalCISD import *
@@ -333,7 +334,7 @@ def DoIntegration(integrator, x_final):
 # ODE SOLVER FUNCTIONS FOR CC - BETA AND MU EVOLUTIONS
 #
 
-class Evolution():
+class Evolution(IOps):
     """
     class to handle all the imaginary-time evolution equations.
     """
@@ -342,39 +343,28 @@ class Evolution():
     global len_t1
     global len_t2
 
+    ## Class attributes
     # Integration step size
-    beta_step = 1e-1
     alpha_step_0 = 1e-1
     alpha_step = 1e-1
+    # alpha, beta initial / current values
+    alpha_in = 0.0
+    beta_in = 0.0
 
     # Fugacity -- Initial number is fixed
     fug = 0.0
 
-    def __init__(self, n_elec, fug, h1, eri, deqtol, ntol, beta_step=None, alpha_step=None):
+    def __init__(self, inp_file='Input', alpha_step=None):
 
-        # Initial alpha, beta value for the current step
-        self.beta_in = 0.0
-        self.alpha_in = 0.0
+        # Initialize super to read Input file and data
+        super().__init__(inp_file=inp_file)
+
+        # Set Up the Integrals
+        self.setUpInts()
 
         # Step Sizes
-        if beta_step is not None:
-            self.beta_step = beta_step
         if alpha_step is not None:
             self.alpha_step = alpha_step
-
-        # Number of electrons
-        self.n_elec = n_elec
-
-        # Fugacity fixing the initial Number at Beta = 0
-        self.fug = fug
-
-        # Hamiltonian Matrix Elements
-        self.h1 = h1
-        self.eri = eri
-
-        # Tolerances
-        self.deqtol = deqtol
-        self.ntol = ntol
 
         # Initialize the integrator
         self.cc_beta_integrator = ode(cc_beta_evolve).set_integrator('vode',method='bdf',rtol=self.deqtol)
@@ -382,13 +372,9 @@ class Evolution():
         self.ci_beta_integrator = ode(ci_beta_evolve).set_integrator('vode',method='bdf',rtol=self.deqtol)
         self.ci_alpha_integrator = ode(ci_alpha_evolve).set_integrator('vode',method='bdf',rtol=self.deqtol)
 
-        # Number of spin orbitals
-        self.nso = np.size( h1 )
-
         # Set the global parameters of length of t1 and t2 arrays
         global len_t1
         global len_t2
-
         len_t1 = self.nso**2
         len_t2 = int( comb(self.nso,2)**2 )
 
@@ -396,6 +382,21 @@ class Evolution():
         self.cc_amps = np.zeros(1+len_t1+len_t2)
         self.ci_amps = np.zeros(1+len_t1+len_t2)
 
+
+    def setUpInts(self):
+
+        # Read in the integrals
+        oneh, eri_in, attrs = self.loadHDF()
+
+        # Do integral transformation
+        self.h1, self.evecs = IntTran2(oneh)
+        self.eri = IntTran4(eri_in,self.evecs)
+
+        # Define fugacity
+        self.fug = self.n_elec / (self.nso - self.n_elec)
+
+        # set beta_step
+        self.beta_step = self.beta_f/(self.beta_pts - 1)
 
     def setAmps(self,cc_amps,ci_amps):
 
