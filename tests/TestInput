@@ -2,8 +2,8 @@
 
 HDF File containing integrals   :   hub_6x1_u2_data.h5
 Number of electrons             :   6
-Final Beta value                :   15
-Number of Beta points           :   151
-Precision in Number             :   1e-6
-Precision in Diff Eqn Evolve    :   1e-8
+Final Beta value                :   1
+Number of Beta points           :   101
+Precision in Number             :   1e-4
+Precision in Diff Eqn Evolve    :   1e-5
 Nuclear Repulsion               :   0.0

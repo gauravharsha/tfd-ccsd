@@ -69,7 +69,7 @@ def test_evolution_class_attributes():
     # Define the evolution class instance
     evol = Evolution(inp_file='TestInput')
 
-    assert evol.beta_step == 0.1
+    assert evol.beta_step == 1e-2
     assert evol.alpha_step == 0.1
     assert evol.nso == iops.nso
     assert evol.n_elec == iops.n_elec
