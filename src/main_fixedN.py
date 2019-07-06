@@ -1,19 +1,16 @@
 import sys
 sys.path.append('../fort_src/')
 
-import numpy as np
-import h5py
-import time
-
+import h5py, time, numpy as np
 from scipy.integrate import ode
 from scipy.misc import comb
 from multiprocessing import Pool
 
-from IntTran import *
-from EvolveFuncsCovar import *
+from iofuncs import *
+from inttran import *
 
-from LibCovCC import betacovrescc, mucovrescc
-from LibCovCI import betacovresci, mucovresci
+from ThermalCCSD import *
+from ThermalCISD import *
 
 import pdb
 
@@ -24,277 +21,6 @@ import pdb
 mu_step_0 = +5e-2
 len_t1 = 0
 len_t2 = 0
-
-
-#
-# ODE SOLVER FUNCTIONS FOR CC - BETA AND MU EVOLUTIONS
-#
-
-# Here, we want to write all the ODE solving function which will repeat and clutter the Main
-# function otherwise.
-
-def DoIntegration(integrator, x_final):
-    """
-    Intermediate function to perform integration from x_initial to x_final.
-    The x_initial and all other information is inherently included in the integrator.
-    """
-    yout = integrator.integrate(x_final)
-    return yout
-
-def cc_and_ci_beta_integrate(cc_integrator, ci_integrator, bspan, y_cc, y_ci, mu_val, alpha, h1, eri):
-    """
-    Function to perform the task of integrating the BETA evolution equations for zeroth, first
-    and second rank CC amplitudes..
-
-    Inputs:
-        cc_integrator   ::  The integrator, an instance of scipy.integrate.ode
-        ci_integrator   ::  The integrator, an instance of scipy.integrate.ode
-        bspan           ::  Array of length 2 containing initial and final beta value
-        y_cc            ::  Initial condition at input BETA i.e. first bspan value
-        y_ci            ::  Initial condition at input BETA i.e. first bspan value
-        alpha           ::  initial value of the ALPHAA / MU parameter
-        h1              ::  One electron integrals
-        eri             ::  Two electron integrals
-
-    Outputs:
-        fin_cc          ::  Final solution at the respective input order
-        fin_ci          ::  Final solution at the respective input order
-    """
-
-    ### Check for any possible errors in the input
-    if not isinstance(cc_integrator,ode):
-        raise ValueError('The argument',cc_integrator,'  needs to be an instance of ',ode)
-    if not isinstance(ci_integrator,ode):
-        raise ValueError('The argument',ci_integrator,'  needs to be an instance of ',ode)
-    if len(bspan) != 2:
-        raise ValueError('Inappropriate length of the input array ',bspan)
-
-    # Set the initial conditions
-    cc_integrator.set_initial_value(y_cc, bspan[0]).set_f_params(mu_val, alpha, h1, eri)
-    ci_integrator.set_initial_value(y_ci, bspan[0]).set_f_params(mu_val, alpha, h1, eri)
-
-    # Create the pool of processes
-    p1 = Pool( processes=1 )
-    p1_async = p1.apply_async(DoIntegration, args=(cc_integrator, bspan[1]))
-    p1.close()
-
-    p2 = Pool( processes=1 )
-    p2_async = p2.apply_async(DoIntegration, args=(ci_integrator, bspan[1]))
-    p2.close()
-
-    p1.join()
-    p2.join()
-
-    fin_cc = p1_async.get(timeout=1)
-    fin_ci = p2_async.get(timeout=1)
-
-    return fin_cc, fin_ci
-
-
-def mu_find_and_integrate(cc_integrator, ci_integrator, mu_in, y_cc, y_ci, nelec, beta, alpha, h1):
-    """
-    Function that will first findt the chemical potential bracket and then, integrate to the
-    correct mu and return the final TAMPS.
-
-    """
-
-    ### Check for any possible errors in the input
-    if not isinstance(cc_integrator,ode):
-        raise ValueError('The argument',cc_integrator,'  needs to be an instance of ',ode)
-    if not isinstance(ci_integrator,ode):
-        raise ValueError('The argument',ci_integrator,'  needs to be an instance of ',ode)
-
-    # Global variables
-    global mu_step_0
-    global ntol
-
-    nso = len(h1)
-
-    # HFB coefficients
-    x = 1/np.sqrt( 1 + np.exp( -beta*h1 + mu_in )*alpha )
-    y = np.exp( -( beta * h1 - mu_in )/ 2 ) * x * np.sqrt( alpha )
-
-    # find the initial expectation value, i.e. <N>
-    num = LinRespNumber(
-        y_cc, y_ci, x, y
-    )
-
-    print('\t\tNumber of particles after the beta evolution = {}'.format(num))
-
-    ndiff_sgn = np.sign( num - nelec )
-    ndiff_mag = np.abs( num - nelec )
-
-    yf_cc = y_cc
-    yf_ci = y_ci
-    mu_f = mu_in
-    
-    # if the number is already converged, then there is no need to do any of the following
-    #   and hence we keep an 'if' statement; if the condition evaluates to FALSE, then
-    #   the outputs will be yf, mu_f
-
-    mu_0 = mu_in
-
-    if ndiff_mag > ntol:
-
-        mu_step = mu_step_0
-
-        # Obtain the bracket to perform BISECTION
-
-        mu_1 = mu_0
-        mu_2 = mu_0 + mu_step
-
-        yf_cc1 = y_cc
-        yf_cc2 = y_cc
-
-        yf_ci1 = y_ci
-        yf_ci2 = y_ci
-
-        count = 0
-        sp_count = 0
-        
-        while np.sign(num - nelec) == ndiff_sgn:
-            count += 1
-            if count > 300:
-                print('Could not find the bracket after 300 steps')
-                count = 0
-                exit()
-                break
-
-            mu_span = [mu_1, mu_2]
-            
-            # Define the solver for CC and CI
-
-            yf_cc1 = yf_cc2
-            yf_ci1 = yf_ci2
-
-            cc_integrator.set_initial_value(yf_cc1, mu_span[0])
-            cc_integrator.set_f_params(beta, alpha, h1)
-            ci_integrator.set_initial_value(yf_ci1, mu_span[0])
-            ci_integrator.set_f_params(beta, alpha, h1)
-
-            # Evolve to the mu_f -- DO Integration
-            p1 = Pool( processes = 1)
-            p1_async = p1.apply_async(DoIntegration, args=(cc_integrator, mu_span[1]))
-            p1.close()
-
-            p2 = Pool( processes = 1)
-            p2_async = p2.apply_async(DoIntegration, args=(ci_integrator, mu_span[1]))
-            p2.close()
-
-            p1.join() #---Wait for the pool process to finish
-            p2.join() #---Wait for the pool process to finish
-
-            yf_cc2 = p1_async.get(timeout=1)
-            yf_ci2 = p2_async.get(timeout=1)
-
-            # HFB coefficients
-            x = 1/np.sqrt( 1 + np.exp( -beta*h1 + mu_span[1] )*alpha )
-            y = np.exp( -( beta * h1 - mu_span[1] )/ 2 ) * x * np.sqrt( alpha )
-
-            # Evaluate the Number Expectation
-            num = LinRespNumber(
-                yf_cc2, yf_ci2, x, y
-            )
-
-            # Finer grid if we are closer to nelec
-            val = np.abs(num - nelec) - ndiff_mag
-            if (val>0):
-                if val<1e-1:
-                    sp_count += 1
-                else:
-                    mu_step_0 *= -1
-                    mu_step *= -1
-                
-                if sp_count >= 10:
-                    mu_step_0 *= -1
-                    mu_step *= -1
-                    sp_count = 0
-
-            ndiff_mag = np.abs(num - nelec)
-
-            # Set up for next iteration
-            mu_1 = mu_2
-            mu_2 = mu_2 + mu_step
-
-            if np.abs(num - nelec) <= ntol:
-                break
-
-            print('\t\t\tStart value of Mu = {}'.format(mu_span[0]))
-            print('\t\t\tEnd value of Mu = {}'.format(mu_span[1]))
-            print('\t\t\tNumber of particles after evolution = {}'.format(num))
-            print('\t\t\t----------------------------------------------\n')
-
-        print('Bracket found between mu = {} and mu = {}'.format(mu_span[0],mu_span[1]))
-
-        # Bisection bracket
-        mu_bisect = mu_span
-        mu_mid = mu_bisect[1]
-
-        ndiff_sgn2 = np.sign(num - nelec)
-        ndiff_sgn1 = -ndiff_sgn2
-
-        while np.abs(num - nelec)>ntol:
-            # Set the initial condition for the mu_solver
-            cc_integrator.set_initial_value(yf_cc1, mu_bisect[0]).set_f_params(beta, alpha, h1)
-            ci_integrator.set_initial_value(yf_ci1, mu_bisect[0]).set_f_params(beta, alpha, h1)
-
-            # Evolve the ODE to mid point of the bracket
-            mu_mid = np.mean(mu_bisect)
-
-            p1 = Pool( processes=1 )
-            p1_async = p1.apply_async(DoIntegration, args=(cc_integrator, mu_mid))
-            p1.close()
-
-            p2 = Pool( processes=1 )
-            p2_async = p2.apply_async(DoIntegration, args=(ci_integrator, mu_mid))
-            p2.close()
-
-            p1.join()
-            p2.join()
-
-            yf_cc_mid = p1_async.get(timeout=1)
-            yf_ci_mid = p2_async.get(timeout=1)
-
-            # HFB coefficients
-            x = 1/np.sqrt( 1 + np.exp( -beta*h1 + mu_mid )*alpha )
-            y = np.exp( -( beta * h1 - mu_mid )/ 2 ) * x * np.sqrt( alpha )
-
-            # Compute the number and update the bracket
-            num = LinRespNumber(
-                yf_cc_mid, yf_ci_mid, x, y
-            )
-
-            if np.sign( num - nelec ) == ndiff_sgn1:
-                mu_bisect[0] = mu_mid
-                yf_cc1 = yf_cc_mid
-                yf_ci1 = yf_ci_mid
-            else:
-                mu_bisect[1] = mu_mid
-                yf_cc2 = yf_cc_mid
-                yf_ci2 = yf_ci_mid
-
-        print('Bisection converges to mu = {}'.format(mu_mid))
-
-        # Now that we have found the MU_MID, we can use one-shot evolution to avoid any added errors
-        mu_f = mu_mid
-        cc_integrator.set_initial_value(yf_cc, mu_0).set_f_params(beta, alpha, h1)
-        ci_integrator.set_initial_value(yf_ci, mu_0).set_f_params(beta, alpha, h1)
-
-        p1 = Pool( processes = 1 )
-        p1_async = p1.apply_async(DoIntegration, args=(cc_integrator, mu_f))
-        p1.close()
-
-        p2 = Pool( processes = 1 )
-        p2_async = p2.apply_async(DoIntegration, args=(ci_integrator, mu_f))
-        p2.close()
-
-        p1.join()
-        p2.join()
-
-        yf_cc = p1_async.get(timeout=1)
-        yf_ci = p2_async.get(timeout=1)
-
-    return yf_cc, yf_ci, mu_f
 
 
 #
@@ -313,10 +39,20 @@ def main():
     print('Reading Input')
     print('----------------------------------------------\n')
 
-    fn, n_elec, beta_f, beta_pts, e_nuc = ParseInput(enuc=True)
+    # Initialize the I/O module
+    iops = IOps(inp_file='Input')
 
-    h1_in, eri_in, attrs  = loadHDF(fname=fn)
-    nso = np.size(h1_in,axis=0)
+    # Read integrals
+    h1_in, eri_in, attrs  = iops.loadHDF()
+
+    # Input Parameters
+    nso = iops.nso
+    n_elec = iops.n_elec
+    beta_f = iops.beta_f
+    beta_pts = iops.beta_pts
+    ntol = iops.ntol
+    deqtol = iops.deqtol
+    e_nuc = iops.e_nuc
     
     input_time = time.time()
 

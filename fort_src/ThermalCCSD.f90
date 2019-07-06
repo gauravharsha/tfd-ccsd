@@ -690,35 +690,35 @@
 
           Real (Kind=pr)    ::  s1diag(na)
 
-         r0 = 0.0_pr
-         r1 = 0.0_pr
-         r2 = 0.0_pr
+          r0 = 0.0_pr
+          r1 = 0.0_pr
+          r2 = 0.0_pr
 
-         s1diag = 0.0_pr
+          s1diag = 0.0_pr
 
-         do p=1, na
-             s1diag(p) = s1(p,p)
-         end do
+          do p=1, na
+              s1diag(p) = s1(p,p)
+          end do
 
-         !$omp parallel default(shared)
-         !$omp do schedule(static)
-         do p=1, na
-             do q=1, na
-                 r1(p,q) = -Sum(s1(:,q)*s1(p,:) * x**2 * y**2)
-                 do r=1, na
-                     r1(p, q) = r1(p, q) + s2(r, p, r, q)*x(r)**2*y(r)**2
-                     do s=1, na
-                         r2(p,q,r,s) = -Sum(s1(p,:)*s2(:,q,r,s)*x**2 * y**2) &
-                             - Sum(s1(q,:)*s2(p,:,r,s)* x**2 * y**2) &
-                             - Sum(s1(:,r)*s2(p,q,:,s)* x**2 * y**2) &
-                             - Sum(s1(:,s)*s2(p,q,r,:)* x**2 * y**2)
-                     end do
-                 end do
-             end do
-         end do
-         !$omp end do
-         !$omp end parallel
+          !$omp parallel default(shared)
+          !$omp do schedule(static)
+          do p=1, na
+              do q=1, na
+                  r1(p,q) = -Sum(s1(:,q)*s1(p,:) * x**2 * y**2)
+                  do r=1, na
+                      r1(p, q) = r1(p, q) + s2(r, p, r, q)*x(r)**2*y(r)**2
+                      do s=1, na
+                          r2(p,q,r,s) = -Sum(s1(p,:)*s2(:,q,r,s)*x**2 * y**2) &
+                              - Sum(s1(q,:)*s2(p,:,r,s)* x**2 * y**2) &
+                              - Sum(s1(:,r)*s2(p,q,:,s)* x**2 * y**2) &
+                              - Sum(s1(:,s)*s2(p,q,r,:)* x**2 * y**2)
+                      end do
+                  end do
+              end do
+          end do
+          !$omp end do
+          !$omp end parallel
 
-         r0 = Sum(x**2 * y**2 * s1diag)
+          r0 = Sum(x**2 * y**2 * s1diag)
 
      End Subroutine NumberCC
