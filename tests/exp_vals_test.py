@@ -71,11 +71,3 @@ def test_eval_energ_and_num():
     assert np.abs( energy - en_exp ) < 5e-8
     assert np.abs( number - num_exp ) < 5e-8
 
-
-# def test_res_beta_cc()
-# 
-# def test_res_beta_ci()
-# 
-# def test_res_alpha_cc()
-# 
-# def test_res_alpha_ci()
