@@ -1,4 +1,4 @@
-       Subroutine EvalNum(S1, S2, Z1, Z2, NA, X, Y, NExp)
+       Subroutine EvalNumber(S1, S2, Z1, Z2, NA, X, Y, NExp)
            Implicit None
       
            Integer, parameter  :: pr = Selected_Real_Kind(15,307)
@@ -53,7 +53,7 @@
       
             NExp = r0 + Sum(Z1*r1) + Sum(Z2*r2)
       
-       End Subroutine EvalNum
+       End Subroutine EvalNumber
 
        Subroutine EvalEnergy(E0, ERI, T1, T2, Z1, Z2, NA, X, Y, ECC)
             Implicit None

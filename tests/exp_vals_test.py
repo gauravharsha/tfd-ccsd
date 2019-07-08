@@ -61,7 +61,7 @@ def test_eval_energ_and_num():
 
     # Eval Energy
     energy = evalenergy(hdiag, eri, s1, s2, s1*0, s2*0, x, y)
-    number = evalnum(s1, s2, s1*0, s2*0, x, y)
+    number = evalnumber(s1, s2, s1*0, s2*0, x, y)
 
     # Expected Values
     en_exp = -5.408955909508

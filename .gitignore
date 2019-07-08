@@ -5,6 +5,8 @@
 
 /fort_src/*.so
 
+/input
+/output
 
 /tests/__pycache__
 /tests/test_sequence
