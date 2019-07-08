@@ -32,7 +32,7 @@
            do p=1, na
                r1(p,p) = x(p)*y(p)
                do q=1, na
-                   r1(p,q) = s1(p,q)*x(p)*y(q)*(x(p)**2 - y(q)**2) &
+                   r1(p,q) = r1(p,q) + s1(p,q)*x(p)*y(q)*(x(p)**2 - y(q)**2) &
                        - x(p)*y(q)*Sum(s1(:,q)*s1(p,:) * x**2 * y**2)
                    do r=1, na
                        r1(p, q) = r1(p, q) + x(p)*y(q)*s2(r, p, r, q)*x(r)**2*y(r)**2

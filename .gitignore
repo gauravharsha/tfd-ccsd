@@ -8,6 +8,8 @@
 /input
 /output
 
+/old_compare
+
 /tests/__pycache__
 /tests/test_sequence
 /tests/.cache/

@@ -440,6 +440,7 @@ def _do_alpha_integration(integrators, amps, betalpha, fug, h1, n_elec, ntol):
 
         # Obtain the bracket to perform the bisection
         mu1 = alpha_in
+        mu2 = alpha_in
 
         cc1 = cc_amps*1
         ci1 = ci_amps*1
@@ -451,13 +452,17 @@ def _do_alpha_integration(integrators, amps, betalpha, fug, h1, n_elec, ntol):
         sp_count = 0
 
         while np.sign( num - n_elec ) == ndiff_sgn:
-            
+
             count += 1
             if count > 300:
                 print('Could not find the bracket after ',count,' steps')
                 count = 0
                 exit()
                 break
+
+            # Set up for next iteration
+            mu1 = mu2
+            mu2 += alpha_step
 
             # update solver initial conditions
             cc1 = cc2*1.0
@@ -471,19 +476,14 @@ def _do_alpha_integration(integrators, amps, betalpha, fug, h1, n_elec, ntol):
             ci_integrator.set_f_params(beta_in, fug, h1)
 
             # Do Evolution
-            cc2 = DoIntegration(cc_integrator,mu1+alpha_step)
-            ci2 = DoIntegration(ci_integrator,mu1+alpha_step)
-
-            mu2 = mu1 + alpha_step
+            cc2 = DoIntegration(cc_integrator,mu2)
+            ci2 = DoIntegration(ci_integrator,mu2)
 
             # Update HFB coefficients and check the number expectation
             x = 1/np.sqrt( 1 + np.exp( -beta_in*h1 + mu2 )*fug)
             y = np.sqrt( 1 - x**2 )
 
             num = eval_number(cc2, ci2, x, y)
-
-            # Set up for next iteration
-            mu1 = mu1 + alpha_step
 
             # Exit if converged
             if np.abs(num - n_elec) <= ntol:
@@ -514,10 +514,10 @@ def _do_alpha_integration(integrators, amps, betalpha, fug, h1, n_elec, ntol):
 
 
         # Printing disabled
-        print('Bracket found betwee mu = {} and mu = {}'.format(mu1,mu1+alpha_step))
+        print('Bracket found betwee mu = {} and mu = {}'.format(mu1-alpha_step,mu1))
 
         # Now do the Bisection
-        mu_bisect = [mu1-alpha_step,mu1]
+        mu_bisect = [mu1,mu2]
 
         mu_mid = mu_bisect[1]
 
