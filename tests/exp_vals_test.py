@@ -59,15 +59,24 @@ def test_eval_energ_and_num():
         y[i] = 1.0
     x = np.sqrt(1 - y**2)
 
-    # Eval Energy
-    energy = evalenergy(hdiag, eri, s1, s2, s1*0, s2*0, x, y)
-    number = evalnumber(s1, s2, s1*0, s2*0, x, y)
+    # Eval Energy -- directly from fortran routines
+    energy_f = evalenergy(hdiag, eri, s1, s2, s1*0, s2*0, x, y)
+    number_f = evalnumber(s1, s2, s1*0, s2*0, x, y)
+
+    # Eval Energy -- from python wrappers
+    cc_amps = np.concatenate(([0],np.reshape(s1,nso**2),CompressT2(s2)))
+    ci_amps = cc_amps * 0.0
+
+    energy_p = eval_energy(hdiag, eri, cc_amps, ci_amps, x, y)
+    number_p = eval_number(cc_amps, ci_amps, x, y)
 
     # Expected Values
     en_exp = -5.408955909508
     num_exp = 6.0
 
     # Check
-    assert np.abs( energy - en_exp ) < 5e-8
-    assert np.abs( number - num_exp ) < 5e-8
+    assert np.abs( energy_f - en_exp ) < 5e-8
+    assert np.abs( number_f - num_exp ) < 5e-8
+    assert np.abs( energy_p - en_exp ) < 5e-8
+    assert np.abs( number_p - num_exp ) < 5e-8
 

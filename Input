@@ -1,9 +1,9 @@
 # Input File for Covariant Thermal Coupled Cluster
 
-HDF File containing integrals   :   ./input/hub_6x1_u2_data.h5
-Number of electrons             :   6
+HDF File containing integrals   :   ./input/hub_2s_u1_data.h5
+Number of electrons             :   2
 Final Beta value                :   10
-Number of Beta points           :   101
-Precision in Number             :   1e-5
-Precision in Diff Eqn Evolve    :   1e-8
+Number of Beta points           :   51
+Precision in Number             :   1e-7
+Precision in Diff Eqn Evolve    :   1e-10
 Nuclear Repulsion               :   0.0

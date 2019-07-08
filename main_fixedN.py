@@ -169,6 +169,8 @@ def main():
         # Do Beta Integration
         evol.DoBetaIntegration()
 
+        print('Beta = ',evol.beta_in)
+
         # Do Alpha search and integration
         evol.BisectionAndAlphaIntegrate()
 

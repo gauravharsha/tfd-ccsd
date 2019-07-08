@@ -193,58 +193,60 @@ def test_cc_beta_evolve():
 
 
 
-# def test_evolution_class_beta_integration():
-# 
-#     #
-#     # Test the attributes of the `Evolution` class
-#     #
-# 
-#     # First read the file and the input and do the formalities
-#     iops = IOps(inp_file='TestInput')
-#     h1, eri, attrs = iops.loadHDF()
-#     hdiag, evecs = IntTran2(h1)
-#     eri_trans = IntTran4(eri,evecs)
-# 
-#     fug = iops.n_elec/(iops.nso-iops.n_elec)
-#     # Define the evolution class instance
-#     evol = Evolution(inp_file='TestInput')
-# 
-#     # amplitudes -- before I set anything
-#     assert evol.cc_amps.all() == evol.ci_amps.all()
-#     assert evol.cc_amps.all() == np.zeros(1 + int(iops.nso**2 + comb(iops.nso,2)**2)).all()
-# 
-#     # Do Beta evolution
-#     evol.DoBetaIntegration()
-#     cc_amps0 = evol.cc_amps
-# 
-# 
-# def test_evolution_class_alpha_integration():
-# 
-#     #
-#     # Test the attributes of the `Evolution` class
-#     #
-# 
-#     # First read the file and the input and do the formalities
-#     iops = IOps(inp_file='TestInput')
-#     h1, eri, attrs = iops.loadHDF()
-#     hdiag, evecs = IntTran2(h1)
-#     eri_trans = IntTran4(eri,evecs)
-# 
-#     fug = iops.n_elec/(iops.nso-iops.n_elec)
-#     # Define the evolution class instance
-#     evol = Evolution(inp_file='TestInput')
-# 
-#     # amplitudes -- before I set anything
-#     assert evol.cc_amps.all() == evol.ci_amps.all()
-#     assert evol.cc_amps.all() == np.zeros(1 + int(iops.nso**2 + comb(iops.nso,2)**2)).all()
-#     cc_amps0 = evol.cc_amps
-# 
-#     x = 1/np.sqrt( 1 + np.exp(-evol.beta_in*evol.h1 + evol.alpha_in)*evol.fug )
-#     y = np.sqrt( 1 - x**2 )
-# 
-#     # Do Beta evolution - should not do anything!!
-#     evol.BisectionAndAlphaIntegrate()
-# 
-#     # amplitudes -- after evolving -- check if it evolve at all
-#     assert np.max(np.abs( evol.cc_amps - cc_amps0 )) < 5e-8
-# 
+def test_evolution_class_beta_integration():
+
+    #
+    # Test the attributes of the `Evolution` class
+    #
+
+    # First read the file and the input and do the formalities
+    iops = IOps(inp_file='TestInput')
+    h1, eri, attrs = iops.loadHDF()
+    hdiag, evecs = IntTran2(h1)
+    eri_trans = IntTran4(eri,evecs)
+
+    fug = iops.n_elec/(iops.nso-iops.n_elec)
+    # Define the evolution class instance
+    evol = Evolution(inp_file='TestInput')
+
+    # amplitudes -- before I set anything
+    assert evol.cc_amps.all() == evol.ci_amps.all()
+    assert evol.cc_amps.all() == np.zeros(1 + int(iops.nso**2 + comb(iops.nso,2)**2)).all()
+
+    # Do Beta evolution
+    evol.DoBetaIntegration()
+    cc_amps0 = evol.cc_amps
+
+    assert np.max( np.abs(cc_amps0) ) > 0
+
+
+def test_evolution_class_alpha_integration():
+
+    #
+    # Test the attributes of the `Evolution` class
+    #
+
+    # First read the file and the input and do the formalities
+    iops = IOps(inp_file='TestInput')
+    h1, eri, attrs = iops.loadHDF()
+    hdiag, evecs = IntTran2(h1)
+    eri_trans = IntTran4(eri,evecs)
+
+    fug = iops.n_elec/(iops.nso-iops.n_elec)
+    # Define the evolution class instance
+    evol = Evolution(inp_file='TestInput')
+
+    # amplitudes -- before I set anything
+    assert evol.cc_amps.all() == evol.ci_amps.all()
+    assert evol.cc_amps.all() == np.zeros(1 + int(iops.nso**2 + comb(iops.nso,2)**2)).all()
+    cc_amps0 = evol.cc_amps
+
+    x = 1/np.sqrt( 1 + np.exp(-evol.beta_in*evol.h1 + evol.alpha_in)*evol.fug )
+    y = np.sqrt( 1 - x**2 )
+
+    # Do Beta evolution - should not do anything!!
+    evol.BisectionAndAlphaIntegrate()
+
+    # amplitudes -- after evolving -- check if it evolve at all
+    assert np.max(np.abs( evol.cc_amps - cc_amps0 )) < 5e-8
+

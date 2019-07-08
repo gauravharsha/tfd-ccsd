@@ -22,7 +22,7 @@ import pdb
 
 t2_symm_tol = 5e-8
 
-alpha_step_0 = +5e-2
+alpha_step_0g = +5e-2
 len_t1 = 0
 len_t2 = 0
 
@@ -181,6 +181,7 @@ def cc_beta_evolve(Beta,Amps,Alpha,Fug,OneH,ERI):
 
     # return concatenated
     out = np.concatenate(( [dt0_dbeta], dt1_dbeta, dt2_dbeta ))
+
     return out
 
 
@@ -294,6 +295,64 @@ def ci_alpha_evolve(Alpha,Amps,Beta,Fug,OneH):
 
 
 #
+# Energy and Number Eval Functions
+# 
+
+def eval_number(CC_amps, CI_amps, X, Y):
+    """
+        Function to evaluate the number expectation value
+    """
+
+    Nso = len(X)
+
+    T0 = CC_amps[0]
+    T1 = np.reshape(CC_amps[1:Nso*Nso+1], (Nso,Nso))
+    T2 = DecompressT2(CC_amps[Nso*Nso+1:], Nso)
+
+    S1 = np.einsum('pq,p,q->pq',T1,X,Y)
+    S2 = np.einsum('pqrs,p,q,r,s->pqrs',T2,X,X,Y,Y)
+
+    # Compress S1, S2 again
+    CC_amps2 = np.concatenate(
+        ([T0],np.reshape(S1,Nso**2),CompressT2(S2))
+    )
+    
+    # CI amplitudes to CC amplitudes
+    Z1, Z2 = ci_to_cc_transform(CI_amps,CC_amps2,Nso)
+
+    # Number Exp value
+    num = evalnumber(T1, T2, Z1, Z2, X, Y)
+
+    return num
+
+def eval_energy(OneH, ERI, CC_amps, CI_amps, X, Y):
+    """
+        Function to evaluate the number expectation value
+    """
+
+    Nso = len(X)
+
+    T0 = CC_amps[0]
+    T1 = np.reshape(CC_amps[1:Nso*Nso+1], (Nso,Nso))
+    T2 = DecompressT2(CC_amps[Nso*Nso+1:], Nso)
+
+    S1 = np.einsum('pq,p,q->pq',T1,X,Y)
+    S2 = np.einsum('pqrs,p,q,r,s->pqrs',T2,X,X,Y,Y)
+
+    # Compress S1, S2 again
+    CC_amps2 = np.concatenate(
+        ([T0],np.reshape(S1,Nso**2),CompressT2(S2))
+    )
+    
+    # CI amplitudes to CC amplitudes
+    Z1, Z2 = ci_to_cc_transform(CI_amps,CC_amps2,Nso)
+
+    # Number Exp value
+    en = evalenergy(OneH, ERI, S1, S2, Z1, Z2, X, Y)
+
+    return en
+
+#
 # ODE integration functions
 # 
 
@@ -333,7 +392,7 @@ def _do_beta_integration(integrators, amps, betalpha, beta_step, fug, h1, eri):
     return cc_amps, ci_amps
 
 
-def _do_alpha_integration(integrators, amps, betalpha, alpha_step, fug, h1, n_elec, ntol):
+def _do_alpha_integration(integrators, amps, betalpha, fug, h1, n_elec, ntol):
     """
         Bisection to find Chemical Pot / Alpha value
         and then do integration
@@ -351,7 +410,11 @@ def _do_alpha_integration(integrators, amps, betalpha, alpha_step, fug, h1, n_el
 
     # Make local copies of the variables
     nso = len(h1)
-    alpha_step_0 = alpha_step
+
+    # Alpha step
+    global alpha_step_0g
+
+    alpha_step = alpha_step_0g
 
     global len_t1
     global len_t2
@@ -373,7 +436,7 @@ def _do_alpha_integration(integrators, amps, betalpha, alpha_step, fug, h1, n_el
     if ndiff_mag > ntol:
 
         # Reset the alpha step
-        alpha_step = alpha_step_0
+        alpha_step = alpha_step_0g
 
         # Obtain the bracket to perform the bisection
         mu1 = alpha_in
@@ -419,22 +482,6 @@ def _do_alpha_integration(integrators, amps, betalpha, alpha_step, fug, h1, n_el
 
             num = eval_number(cc2, ci2, x, y)
 
-            # Check if we are evolving in the right direction or do we need to switch sign of step
-            val = np.abs(num - n_elec) - ndiff_mag
-            if (val>0):
-                if val<1e-1:
-                    sp_count += 1
-                else:
-                    alpha_step_0 *= -1
-                    alpha_step *= -1
-                
-                if sp_count >= 10:
-                    alpha_step_0 *= -1
-                    alpha_step *= -1
-                    sp_count = 0
-
-            ndiff_mag = np.abs(num - n_elec)
-
             # Set up for next iteration
             mu1 = mu1 + alpha_step
 
@@ -442,19 +489,37 @@ def _do_alpha_integration(integrators, amps, betalpha, alpha_step, fug, h1, n_el
             if np.abs(num - n_elec) <= ntol:
                 break
 
+            # Check if we are evolving in the right direction or do we need to switch sign of step
+            val = np.abs(num - n_elec) - ndiff_mag
+            if (val>0):
+                if val<1e-1:
+                    sp_count += 1
+                else:
+                    alpha_step_0g *= -1
+                    alpha_step *= -1
+                
+                if sp_count >= 10:
+                    alpha_step_0g *= -1
+                    alpha_step *= -1
+                    sp_count = 0
+
+            ndiff_mag = np.abs(num - n_elec)
+
             # # Do some printing
-            # print('\t\t\tStart value of Mu = {}'.format(mu1-alpha_step))
-            # print('\t\t\tEnd value of Mu = {}'.format(mu1))
-            # print('\t\t\tNumber of particles after evolution = {}'.format(num))
-            # print('\t\t\t----------------------------------------------\n')
+            print('\t\t\tStart value of Mu = {}'.format(mu1-alpha_step))
+            print('\t\t\tEnd value of Mu = {}'.format(mu1))
+            print('\t\t\tNumber of particles after evolution = {}'.format(num))
+            print('\t\t\t----------------------------------------------\n')
             
 
 
         # Printing disabled
-        # print('Bracket found betwee mu = {} and mu = {}'.format(mu1,mu1+alpha_step))
+        print('Bracket found betwee mu = {} and mu = {}'.format(mu1,mu1+alpha_step))
 
         # Now do the Bisection
         mu_bisect = [mu1-alpha_step,mu1]
+
+        mu_mid = mu_bisect[1]
 
         ndiff_sgn_right = np.sign(num - n_elec)
         ndiff_sgn_left = -ndiff_sgn_right
@@ -510,60 +575,6 @@ def _do_alpha_integration(integrators, amps, betalpha, alpha_step, fug, h1, n_el
         mu_mid = alpha_in
 
     return cc_amps_out, ci_amps_out, mu_mid
-
-#
-# Energy and Number Eval Functions
-# 
-
-def eval_number(CI_amps, CC_amps, X, Y):
-    """
-        Function to evaluate the number expectation value
-    """
-
-    Nso = len(X)
-
-    T0 = CC_amps[0]
-    T1 = np.reshape(CC_amps[1:Nso*Nso+1], (Nso,Nso))
-    T2 = DecompressT2(CC_amps[Nso*Nso+1:], Nso)
-
-    S1 = np.einsum('pq,p,q->pq',T1,X,Y)
-    S2 = np.einsum('pqrs,p,q,r,s->pqrs',T2,X,X,Y,Y)
-
-    # Compress S1, S2 again
-    CC_amps2 = np.concatenate(
-        ([T0],np.reshape(S1,Nso**2),CompressT2(S2))
-    )
-    
-    # CI amplitudes to CC amplitudes
-    Z1, Z2 = ci_to_cc_transform(CI_amps,CC_amps2,Nso)
-
-    # Number Exp value
-    return evalnumber(S1, S2, Z1, Z2, X, Y)
-
-def eval_energy(OneH, ERI, CI_amps, CC_amps, X, Y):
-    """
-        Function to evaluate the number expectation value
-    """
-
-    Nso = len(X)
-
-    T0 = CC_amps[0]
-    T1 = np.reshape(CC_amps[1:Nso*Nso+1], (Nso,Nso))
-    T2 = DecompressT2(CC_amps[Nso*Nso+1:], Nso)
-
-    S1 = np.einsum('pq,p,q->pq',T1,X,Y)
-    S2 = np.einsum('pqrs,p,q,r,s->pqrs',T2,X,X,Y,Y)
-
-    # Compress S1, S2 again
-    CC_amps2 = np.concatenate(
-        ([T0],np.reshape(S1,Nso**2),CompressT2(S2))
-    )
-    
-    # CI amplitudes to CC amplitudes
-    Z1, Z2 = ci_to_cc_transform(CI_amps,CC_amps2,Nso)
-
-    # Number Exp value
-    return evalenergy(OneH, ERI, S1, S2, Z1, Z2, X, Y)
 
 
 #
@@ -675,7 +686,7 @@ class Evolution(IOps):
         be_al = [self.beta_in, self.alpha_in]
 
         cc_amps, ci_amps, al_mid = _do_alpha_integration(
-            intgrs,amps,be_al,self.alpha_step, self.fug, self.h1, self.n_elec, self.ntol
+            intgrs,amps,be_al, self.fug, self.h1, self.n_elec, self.ntol
         )
 
         self.alpha_in = al_mid
