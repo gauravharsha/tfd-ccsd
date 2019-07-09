@@ -115,7 +115,7 @@ def main():
     #################################################################
     
     output_fn = evol.fn.replace('input','output')
-    output_fn = output_fn.replace('.h5','_thermal_ccsd_cov.h5')
+    output_fn = output_fn.replace('.h5','_tfd_ccsd.h5')
 
     fout = h5py.File(output_fn,'w')
 
@@ -164,7 +164,10 @@ def main():
     #    Integrate the ODE's to preserve the number of particles    #
     #################################################################
 
-    while evol.beta_in < beta_f:
+    while i_beta < evol.beta_pts-1:
+
+        # Beta point index
+        i_beta += 1
 
         # Do Beta Integration
         evol.DoBetaIntegration()
@@ -199,9 +202,6 @@ def main():
         fout['cc_amps'][i_beta] = cc_amps
         fout['ci_amps'][i_beta] = ci_amps
         
-        # Beta point index
-        i_beta += 1
-
     ode_time = time.time()
 
     #################################################################

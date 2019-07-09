@@ -174,10 +174,18 @@ def cc_beta_evolve(Beta,Amps,Alpha,Fug,OneH,ERI):
     # Get the residuals
     r0, r1, r2 = betacc(OneH,ERI,T1,T2,U,V)
 
+    # Antisymmetrize r2
+    s2 = (
+            r2 \
+            - np.einsum('baij->abij',r2) \
+            - np.einsum('abji->abij',r2) \
+            + np.einsum('baji->abij',r2) \
+        )/4.0
+
     # Compress and concatenate
     dt0_dbeta = r0
     dt1_dbeta = np.reshape( r1, int(NSO**2) )
-    dt2_dbeta = CompressT2( r2 )
+    dt2_dbeta = CompressT2( s2 )
 
     # return concatenated
     out = np.concatenate(( [dt0_dbeta], dt1_dbeta, dt2_dbeta ))
@@ -213,10 +221,18 @@ def ci_beta_evolve(Beta,Amps,Alpha,Fug,OneH,ERI):
     # Get the residuals
     r0, r1, r2 = betaci(OneH,ERI,T1,T2,U,V)
 
+    # Antisymmetrize r2
+    s2 = (
+            r2 \
+            - np.einsum('baij->abij',r2) \
+            - np.einsum('abji->abij',r2) \
+            + np.einsum('baji->abij',r2) \
+        )/4.0
+
     # Compress and concatenate
     dt0_dbeta = r0
     dt1_dbeta = np.reshape( r1, int(NSO**2) )
-    dt2_dbeta = CompressT2( r2 )
+    dt2_dbeta = CompressT2( s2 )
 
     # return concatenated
     return np.concatenate(( [dt0_dbeta], dt1_dbeta, dt2_dbeta ))
@@ -249,10 +265,18 @@ def cc_alpha_evolve(Alpha,Amps,Beta,Fug,OneH):
     # Get the residuals
     r0, r1, r2 = numbercc(T1,T2,U,V)
 
+    # Antisymmetrize r2
+    s2 = (
+            r2 \
+            - np.einsum('baij->abij',r2) \
+            - np.einsum('abji->abij',r2) \
+            + np.einsum('baji->abij',r2) \
+        )/4.0
+
     # Compress and concatenate
     dt0_dbeta = r0
     dt1_dbeta = np.reshape( r1, int(NSO**2) )
-    dt2_dbeta = CompressT2( r2 )
+    dt2_dbeta = CompressT2( s2 )
 
     # return concatenated
     return np.concatenate(( [dt0_dbeta], dt1_dbeta, dt2_dbeta ))
@@ -285,10 +309,18 @@ def ci_alpha_evolve(Alpha,Amps,Beta,Fug,OneH):
     # Get the residuals
     r0, r1, r2 = numberci(T1,T2,U,V)
 
+    # Antisymmetrize r2
+    s2 = (
+            r2 \
+            - np.einsum('baij->abij',r2) \
+            - np.einsum('abji->abij',r2) \
+            + np.einsum('baji->abij',r2) \
+        )/4.0
+
     # Compress and concatenate
     dt0_dbeta = r0
     dt1_dbeta = np.reshape( r1, int(NSO**2) )
-    dt2_dbeta = CompressT2( r2 )
+    dt2_dbeta = CompressT2( s2 )
 
     # return concatenated
     return np.concatenate(( [dt0_dbeta], dt1_dbeta, dt2_dbeta ))
