@@ -1,11 +1,7 @@
---------------------
 # Background
---------------------
 The `zero-limit` branch seems to be working well, and giving the appropriate Zero Temperature limit of the amplitudes (at least for some cases - need more checks). It is, therefore, time to clean up the code and prepare a public version of the same. The Fixed Reference is obsolete, except for the purpose of the upcoming paper. Besides, there are other features that are desirable in the new code. Here we will list them out.
 
---------------------
 ## Requirements
---------------------
 
 Overall features
 1. No fixed reference needed (can perhaps be added later if deemed necessary)
@@ -24,9 +20,7 @@ Features for Fortran Modules
 Features of Python Modules
 1. Modular and Object Oriented
 
---------------------
 ## Important
---------------------
 
 The division by small x, y (or the Bogoliubov parameters) in the driver terms of the Beta and Mu evolution is introducint numerical noise -- better if we get cleaner analytical expressions and code them. Use drudge to obtain them.
 
