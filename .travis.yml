@@ -1,0 +1,18 @@
+language: python
+
+sudo: required
+dist: trusty
+
+python:
+    - 3.6
+
+before_install:
+    - sudo apt-get install -y --allow-unauthenticated python-h5py python-dev python-numpy python-scipy python-jinja2 
+    - pip install h5py
+
+script: 
+    - f2py -c --verbose --opt='-O3' -m ThermalCCSD ThermalCCSD.f90 --f90flags="-fopenmp" -lgomp
+    - f2py -c --verbose --opt='-O3' -m ThermalCISD ThermalCISD.f90 --f90flags="-fopenmp" -lgomp
+    - f2py -c --verbose --opt='-O3' -m ExpVals ExpVals.f90 --f90flags="-fopenmp" -lgomp    
+    - cd tests
+    - pytest
