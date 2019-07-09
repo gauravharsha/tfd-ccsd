@@ -119,13 +119,12 @@ class IOps:
             raise ValueError('The attributes of the Energy and ERI data in the file ',fname,' do not match')
         
         # Print the attribute data
-        print('\n\n')
-        print('----------------------------')
-        print('    Molecule Parameters from Input File')
-        print('----------------------------')
+        print('\n')
+        print('==============================================================')
+        print('\tMolecule Parameters from Input File')
+        print('==============================================================')
         for attr_tup in attr_list1:
             print(attr_tup[0],' = ',attr_tup[1])
-        print('----------------------------')
     
         # Set the number of Spin orbitals
         self.nso = np.size(h1,axis=0)

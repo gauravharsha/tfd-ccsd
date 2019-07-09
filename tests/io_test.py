@@ -25,10 +25,10 @@ def test_readinput():
     # According to the InputTest
     assert iops.fn == 'hub_6x1_u2_data.h5'
     assert iops.n_elec == 6
-    assert iops.beta_f == 15
-    assert iops.beta_pts == 151
-    assert iops.ntol == 1e-6
-    assert iops.deqtol == 1e-8
+    assert iops.beta_f == 1
+    assert iops.beta_pts == 101
+    assert iops.ntol == 1e-4
+    assert iops.deqtol == 1e-5
     assert iops.e_nuc == 0.0
 
 def test_readintegrals():
