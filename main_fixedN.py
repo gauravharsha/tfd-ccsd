@@ -115,7 +115,7 @@ def main():
     #################################################################
     
     output_fn = evol.fn.replace('input','output')
-    output_fn = output_fn.replace('.h5','_tfd_ccsd.h5')
+    output_fn = output_fn.replace('_data.h5','_tfd_ccsd.h5')
 
     fout = h5py.File(output_fn,'w')
 
@@ -124,6 +124,9 @@ def main():
     ]
 
     evol.createh5(fout, output_dsets, beta_pts, evol.attrs)
+
+    # save the evecs
+    fout.create_dataset('evecs',evol.evecs)
 
     # the amplitudes datasets will have to be handled separately
     fout.create_dataset('cc_amps',(beta_pts,1+len_t1+len_t2))
