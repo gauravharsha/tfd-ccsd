@@ -126,7 +126,7 @@ def main():
     evol.createh5(fout, output_dsets, beta_pts, evol.attrs)
 
     # save the evecs
-    fout.create_dataset('evecs',evol.evecs)
+    fout.create_dataset('evecs',data=evol.evecs)
 
     # the amplitudes datasets will have to be handled separately
     fout.create_dataset('cc_amps',(beta_pts,1+len_t1+len_t2))
