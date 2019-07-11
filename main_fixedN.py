@@ -46,7 +46,7 @@ def main():
     print('==============================================================')
 
     # Initialize the Evolution module
-    evol = Evolution(inp_file='Input')
+    evol = Evolution(inp_file='Input',alpha_step=0.1)
 
     # Extract the parameters
     nso = evol.nso

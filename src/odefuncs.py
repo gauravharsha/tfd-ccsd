@@ -645,6 +645,8 @@ class Evolution(IOps):
         # Step Sizes
         if alpha_step is not None:
             self.alpha_step = alpha_step
+            global alpha_step_0g
+            alpha_step_0g = self.alpha_step
 
         # Set the global parameters of length of t1 and t2 arrays
         global len_t1
