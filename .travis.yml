@@ -25,7 +25,7 @@ install:
     - source activate test-env
     - conda install scipy 
     - conda install numpy
-    - conda install h5py
+    - pip install h5py
 
 script: 
     - cd fort_src
