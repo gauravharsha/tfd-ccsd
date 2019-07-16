@@ -62,6 +62,12 @@ def main():
     # Integrals
     h1 = evol.h1
     eri = evol.eri
+
+    # Fix the chemical potential
+    mu = evol.h1[n_elec]/4
+    evol.h1 -= mu
+
+    print('Chemical Potential set to: ',mu)
     
     input_time = time.time()
 
@@ -115,7 +121,7 @@ def main():
     #################################################################
     
     output_fn = evol.fn.replace('input','output')
-    output_fn = output_fn.replace('_data.h5','_tfd_ccsd.h5')
+    output_fn = output_fn.replace('_data.h5','_tfd_ccsd_fixedMu.h5')
 
     fout = h5py.File(output_fn,'w')
 
@@ -176,9 +182,6 @@ def main():
         evol.DoBetaIntegration()
 
         print('Beta = ',evol.beta_in)
-
-        # Do Alpha search and integration
-        evol.BisectionAndAlphaIntegrate()
 
         # New HFB parameters
         x = 1/np.sqrt( 1 + np.exp(-evol.beta_in*h1 + evol.alpha_in)*fug )

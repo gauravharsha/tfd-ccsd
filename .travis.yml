@@ -1,18 +1,40 @@
 language: python
 
 sudo: required
-dist: trusty
+dist: xenial
 
 python:
     - 3.6
 
-before_install:
-    - sudo apt-get install -y --allow-unauthenticated python-h5py python-dev python-numpy python-scipy python-jinja2 
-    - pip install h5py
+env: FC=gfortran
 
-script: 
+addons:
+  apt:
+    packages:
+    - gfortran
+
+install:
+    - wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
+    - bash miniconda.sh -b -p $HOME/miniconda
+    - export PATH="$HOME/miniconda/bin:$PATH"
+    - hash -r
+    - conda config --set always_yes yes --set changeps1 no
+    - conda update -q conda
+    - conda info -a
+    - conda create -q -n test-env python=$TRAVIS_PYTHON_VERSION
+    - source activate test-env
+    - conda install scipy 
+    - conda install numpy
+    - sudo apt-get install python-dev
+    - conda install cython
+    - sudo apt-get install libhdf5-dev
+    - conda install hdf5
+    - conda install h5py
+
+script:
+    - cd fort_src
     - f2py -c --verbose --opt='-O3' -m ThermalCCSD ThermalCCSD.f90 --f90flags="-fopenmp" -lgomp
     - f2py -c --verbose --opt='-O3' -m ThermalCISD ThermalCISD.f90 --f90flags="-fopenmp" -lgomp
-    - f2py -c --verbose --opt='-O3' -m ExpVals ExpVals.f90 --f90flags="-fopenmp" -lgomp    
-    - cd tests
+    - f2py -c --verbose --opt='-O3' -m ExpVals ExpVals.f90 --f90flags="-fopenmp" -lgomp
+    - cd ../tests
     - pytest
