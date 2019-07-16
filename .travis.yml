@@ -11,8 +11,9 @@ before_install:
     - pip install h5py
 
 script: 
+    - cd fort_src
     - f2py -c --verbose --opt='-O3' -m ThermalCCSD ThermalCCSD.f90 --f90flags="-fopenmp" -lgomp
     - f2py -c --verbose --opt='-O3' -m ThermalCISD ThermalCISD.f90 --f90flags="-fopenmp" -lgomp
-    - f2py -c --verbose --opt='-O3' -m ExpVals ExpVals.f90 --f90flags="-fopenmp" -lgomp    
-    - cd tests
+    - f2py -c --verbose --opt='-O3' -m ExpVals ExpVals.f90 --f90flags="-fopenmp" -lgomp
+    - cd ../tests
     - pytest
