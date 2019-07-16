@@ -5,10 +5,19 @@ dist: trusty
 
 python:
     - 3.6
+    - 3.7
+
+env: FC=gfortran
+
+addons:
+  apt:
+    packages:
+    - gfortran
 
 before_install:
     - sudo apt-get install -y --allow-unauthenticated python-h5py python-dev python-numpy python-scipy python-jinja2 
     - pip install h5py
+    - pip install scipy
 
 script: 
     - cd fort_src
