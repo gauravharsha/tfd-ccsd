@@ -25,9 +25,9 @@ install:
     - source activate test-env
     - conda install scipy 
     - conda install numpy
-    - conda install cython
     - sudo apt-get install python-dev
-    - sudo apt-get install libhdf5
+    - conda install cython
+    - conda install hdf5
     - pip install h5py
 
 script: 
