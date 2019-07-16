@@ -25,9 +25,10 @@ install:
     - source activate test-env
     - conda install scipy 
     - conda install numpy
+    - conda install cython
     - sudo apt-get install python-dev
-    - conda install hdf5
-    - conda install h5py
+    - sudo apt-get install libhdf5
+    - pip install h5py
 
 script: 
     - cd fort_src
