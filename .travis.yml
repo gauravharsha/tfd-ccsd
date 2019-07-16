@@ -38,7 +38,5 @@ install:
     - f2py -c --verbose --opt='-O3' -m ThermalCCSD ThermalCCSD.f90 --f90flags="-fopenmp" -lgomp
     - f2py -c --verbose --opt='-O3' -m ThermalCISD ThermalCISD.f90 --f90flags="-fopenmp" -lgomp
     - f2py -c --verbose --opt='-O3' -m ExpVals ExpVals.f90 --f90flags="-fopenmp" -lgomp
-
-script: 
     - cd ../tests
     - pytest
