@@ -28,7 +28,7 @@ install:
     - sudo apt-get install python-dev
     - conda install cython
     - sudo apt-get install libhdf5-dev
-    - conda install -c hdf5
+    - conda install hdf5
     - conda install h5py
 
 script:
