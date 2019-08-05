@@ -70,6 +70,10 @@ def test_eval_energ_and_num():
     energy_p = eval_energy(hdiag, eri, cc_amps, ci_amps, x, y)
     number_p = eval_number(cc_amps, ci_amps, x, y)
 
+    # Eval Twobody expectation value for Energy and number
+    energy_twobody = evaltwobodyh(np.diag(hdiag), eri, s1, s2, s1*0, s2*0, x, y)
+    number_twobody = evaltwobodyh(np.eye(nso), eri*0, s1, s2, s1*0, s2*0, x, y)
+
     # Expected Values
     en_exp = -5.408955909508
     num_exp = 6.0
@@ -79,4 +83,6 @@ def test_eval_energ_and_num():
     assert np.abs( number_f - num_exp ) < 5e-8
     assert np.abs( energy_p - en_exp ) < 5e-8
     assert np.abs( number_p - num_exp ) < 5e-8
+    assert np.abs( energy_twobody - en_exp ) < 5e-8
+    assert np.abs( number_twobody - num_exp ) < 5e-8
 
