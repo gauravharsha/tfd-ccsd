@@ -446,7 +446,6 @@ def _do_alpha_integration(integrators, amps, betalpha, fug, h1, n_elec, ntol):
     ndiff_mag = np.abs( num - n_elec )
 
     print('Number difference: ',ndiff_sgn,num)
-    exit()
 
     # if the number is already converged, then there is no need to do any of the following
     #   and hence we keep an 'if' statement; if the condition evaluates to FALSE, then
