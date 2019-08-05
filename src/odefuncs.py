@@ -115,11 +115,11 @@ def ci_to_cc_transform(CI_amps, CC_amps, Nso):
     """
     Function that returns the Z-amplitudes from Z-CI and T amplitudes 
     Inputs:     
-                CC_amps       ::  T - amplitudes stacked together as follows
+                CC_amps     ::  T - amplitudes stacked together as follows
                                 T0      ::  T0 amplitude
                                 T1      ::  T1 amplitude vectors :: (Nso*Nso) elements 
                                 T2      ::  T2 amplitude vectors :: (Nso-choose-2)^2 elements
-                CI_amps    ::  CI-amplitudes for the left hand state
+                CI_amps     ::  CI-amplitudes for the left hand state
                 Nso         ::  Number of Spin orbitals
     Returns:
                 Z_out_1     ::  Nso x Nso matrix for Z1
@@ -341,19 +341,11 @@ def eval_number(CC_amps, CI_amps, X, Y):
     T1 = np.reshape(CC_amps[1:Nso*Nso+1], (Nso,Nso))
     T2 = DecompressT2(CC_amps[Nso*Nso+1:], Nso)
 
-    S1 = np.einsum('pq,p,q->pq',T1,X,Y)
-    S2 = np.einsum('pqrs,p,q,r,s->pqrs',T2,X,X,Y,Y)
-
-    # Compress S1, S2 again
-    CC_amps2 = np.concatenate(
-        ([T0],np.reshape(S1,Nso**2),CompressT2(S2))
-    )
-    
     # CI amplitudes to CC amplitudes
-    Z1, Z2 = ci_to_cc_transform(CI_amps,CC_amps2,Nso)
+    Z1, Z2 = ci_to_cc_transform(CI_amps,CC_amps,Nso)
 
     # Number Exp value
-    num = evalnumber(T1, T2, Z1, Z2, X, Y)
+    num = evalnumber(T1,T2,Z1,Z2,X,Y)
 
     return num
 
@@ -368,19 +360,11 @@ def eval_energy(OneH, ERI, CC_amps, CI_amps, X, Y):
     T1 = np.reshape(CC_amps[1:Nso*Nso+1], (Nso,Nso))
     T2 = DecompressT2(CC_amps[Nso*Nso+1:], Nso)
 
-    S1 = np.einsum('pq,p,q->pq',T1,X,Y)
-    S2 = np.einsum('pqrs,p,q,r,s->pqrs',T2,X,X,Y,Y)
-
-    # Compress S1, S2 again
-    CC_amps2 = np.concatenate(
-        ([T0],np.reshape(S1,Nso**2),CompressT2(S2))
-    )
-    
     # CI amplitudes to CC amplitudes
-    Z1, Z2 = ci_to_cc_transform(CI_amps,CC_amps2,Nso)
+    Z1, Z2 = ci_to_cc_transform(CI_amps,CC_amps,Nso)
 
     # Number Exp value
-    en = evalenergy(OneH, ERI, S1, S2, Z1, Z2, X, Y)
+    en = evalenergy(OneH, ERI, T1, T2, Z1, Z2, X, Y)
 
     return en
 
@@ -460,6 +444,9 @@ def _do_alpha_integration(integrators, amps, betalpha, fug, h1, n_elec, ntol):
     # Record the differenc and sign
     ndiff_sgn = np.sign( num - n_elec )
     ndiff_mag = np.abs( num - n_elec )
+
+    print('Number difference: ',ndiff_sgn,num)
+    exit()
 
     # if the number is already converged, then there is no need to do any of the following
     #   and hence we keep an 'if' statement; if the condition evaluates to FALSE, then

@@ -1,346 +1,375 @@
-       Subroutine EvalNumber(S1, S2, Z1, Z2, NA, X, Y, NExp)
-           Implicit None
-      
-           Integer, parameter  :: pr = Selected_Real_Kind(15,307)
-           Integer, Intent(In) :: NA
-           Real (Kind=pr), Intent(In) :: X(NA), Y(NA)
-           Real (Kind=pr), Intent(In) :: S1(NA,NA), Z1(NA,NA)
-           Real (Kind=pr), Intent(In) :: S2(NA,NA,NA,NA)
-           Real (Kind=pr), Intent(In) :: Z2(NA,NA,NA,NA)
-           Real (Kind=pr), Intent(Out)   ::  NExp
-           Real (Kind=pr)    ::  R1(NA,NA)
-           Real (Kind=pr)    ::  R2(NA,NA,NA,NA)
-           Real (Kind=pr)    ::  R0
-           Integer :: p,q,r,s
-      
-           Real (Kind=pr)    ::  s1diag(na)
-      
-           r0 = 0.0_pr
-           r1 = 0.0_pr
-           r2 = 0.0_pr
-      
-           s1diag = 0.0_pr
-      
-           do p=1, na
-               s1diag(p) = s1(p,p)
-           end do
-      
-           r0 = Sum(x**2 * y**2 * s1diag) + Sum(y**2)
-           
-           !$omp parallel default(shared)
-           !$omp do schedule(static)
-           do p=1, na
-               r1(p,p) = x(p)*y(p)
-               do q=1, na
-                   r1(p,q) = r1(p,q) + s1(p,q)*x(p)*y(q)*(x(p)**2 - y(q)**2) &
-                       - x(p)*y(q)*Sum(s1(:,q)*s1(p,:) * x**2 * y**2)
-                   do r=1, na
-                       r1(p, q) = r1(p, q) + x(p)*y(q)*s2(r, p, r, q)*x(r)**2*y(r)**2
-                       do s=1, na
-                           r2(p,q,r,s) = s2(p,q,r,s)*(x(p)**2 + x(q)**2 &
-                               - y(r)**2 - y(s)**2) &
-                               - Sum(s1(p,:)*s2(:,q,r,s)*x**2 * y**2) &
-                               - Sum(s1(q,:)*s2(p,:,r,s)* x**2 * y**2) &
-                               - Sum(s1(:,r)*s2(p,q,:,s)* x**2 * y**2) &
-                               - Sum(s1(:,s)*s2(p,q,r,:)* x**2 * y**2)
-                           r2(p,q,r,s) = r2(p,q,r,s)*x(p)*x(q)*y(r)*y(s)
-                       end do
-                   end do
-               end do
-           end do
-           !$omp end do
-           !$omp end parallel
-      
-            NExp = r0 + Sum(Z1*r1) + Sum(Z2*r2)
-      
-       End Subroutine EvalNumber
+      Subroutine EvalEnergy(E0, ERI, S1, S2, Z1, Z2, NA, X, Y, Energy)
+          Implicit None
+          Integer, parameter  :: pr = Selected_Real_Kind(15,307)
+          Integer, Intent(In) :: NA
+          Real (Kind=pr), Intent(In) :: E0(Na), ERI(NA,NA,NA,NA)
+          Real (Kind=pr), Intent(In) :: X(NA), Y(NA)
+          Real (Kind=pr), Intent(In) :: S1(NA,NA), Z1(NA,NA)
+          Real (Kind=pr), Intent(In) :: S2(NA,NA,NA,NA), Z2(NA,NA,NA,NA)
+          Real (Kind=pr), Intent(Out) :: Energy
+          Real (Kind=pr)    :: R0
+          Real (Kind=pr)    :: R1(NA,NA)
+          Real (Kind=pr)    :: R2(NA,NA,NA,NA)
+          Integer :: a, b, c, d, i, j
 
-       Subroutine EvalEnergy(E0, ERI, T1, T2, Z1, Z2, NA, X, Y, ECC)
-            Implicit None
-            Integer, parameter  :: pr = Selected_Real_Kind(15,307)
-            Integer, Intent(In) :: NA
-            Real (Kind=pr), Intent(In) :: E0(Na), ERI(NA,NA,NA,NA)
-            Real (Kind=pr), Intent(In) :: X(NA), Y(NA)
-            Real (Kind=pr), Intent(In) :: T1(NA,NA), Z1(NA,NA)
-            Real (Kind=pr), Intent(In) :: T2(NA,NA,NA,NA)
-            Real (Kind=pr), Intent(In) :: Z2(NA,NA,NA,NA)
-            Real (Kind=pr) :: R0
-            Real (Kind=pr) :: R1(NA,NA)
-            Real (Kind=pr) :: R2(NA,NA,NA,NA)
-            Real (Kind=pr), Intent(Out) :: ECC
-            Integer :: a, b, c, d
-       
+          Real (Kind=pr), dimension(:, :), allocatable :: tau0
+          Real (Kind=pr), dimension(:), allocatable :: tau1
+          Real (Kind=pr), dimension(:, :), allocatable :: tau4
+          Real (Kind=pr), dimension(:, :), allocatable :: tau5
+          Real (Kind=pr), dimension(:, :), allocatable :: tau6
+          Real (Kind=pr), dimension(:, :), allocatable :: tau8
+          Real (Kind=pr), dimension(:, :, :, :), allocatable :: tau11
+          Real (Kind=pr), dimension(:, :, :, :), allocatable :: tau12
+          Real (Kind=pr), dimension(:, :, :, :), allocatable :: tau13
+          Real (Kind=pr), dimension(:, :, :, :), allocatable :: tau14
+          Real (Kind=pr), dimension(:, :, :, :), allocatable :: tau15
+          Real (Kind=pr), dimension(:, :, :, :), allocatable :: tau16
+          Real (Kind=pr), dimension(:, :, :, :), allocatable :: tau17
+          Real (Kind=pr), dimension(:, :, :, :), allocatable :: tau18
+          Real (Kind=pr), dimension(:, :, :, :), allocatable :: tau19
+          Real (Kind=pr), dimension(:, :, :, :), allocatable :: tau20
+          Real (Kind=pr), dimension(:, :), allocatable :: tau21
+          Real (Kind=pr), dimension(:, :), allocatable :: tau22
+          Real (Kind=pr), dimension(:, :, :, :), allocatable :: tau23
 
-            Real (Kind=pr), dimension(:, :), allocatable :: tau0
-            Real (Kind=pr), dimension(:, :), allocatable :: tau1
-            Real (Kind=pr), dimension(:, :), allocatable :: tau3
-            Real (Kind=pr), dimension(:, :), allocatable :: tau4
-            Real (Kind=pr), dimension(:, :), allocatable :: tau5
-            Real (Kind=pr), dimension(:, :), allocatable :: tau7
-            Real (Kind=pr), dimension(:, :, :, :), allocatable :: tau8
-            Real (Kind=pr), dimension(:, :, :, :), allocatable :: tau9
-            Real (Kind=pr), dimension(:, :, :, :), allocatable :: tau10
-            Real (Kind=pr), dimension(:, :, :, :), allocatable :: tau11
-            Real (Kind=pr), dimension(:, :, :, :), allocatable :: tau14
-            Real (Kind=pr), dimension(:, :), allocatable :: tau17
-            Real (Kind=pr), dimension(:, :), allocatable :: tau19
-            Real (Kind=pr), dimension(:, :, :, :), allocatable :: tau21
-            Real (Kind=pr), dimension(:, :, :, :), allocatable :: tau22
-            Real (Kind=pr), dimension(:, :, :, :), allocatable :: tau26
-            Real (Kind=pr), dimension(:, :, :, :), allocatable :: tau27
-            Real (Kind=pr), dimension(:, :, :, :), allocatable :: tau28
-            Real (Kind=pr), dimension(:, :), allocatable :: tau31
-            Real (Kind=pr), dimension(:, :, :, :), allocatable :: tau33
-            Real (Kind=pr), dimension(:, :), allocatable :: tau34
-            Real (Kind=pr), dimension(:, :, :, :), allocatable :: tau37
-            Real (Kind=pr), dimension(:, :, :, :), allocatable :: tau38
-            Real (Kind=pr), dimension(:, :, :, :), allocatable :: tau39
-            Real (Kind=pr), dimension(:, :, :, :), allocatable :: tau40
-            Real (Kind=pr), dimension(:, :, :, :), allocatable :: tau41
-            Real (Kind=pr), dimension(:, :, :, :), allocatable :: tau42
-            Real (Kind=pr), dimension(:, :, :, :), allocatable :: tau43
-            Real (Kind=pr), dimension(:, :, :, :), allocatable :: tau46
-            Real (Kind=pr), dimension(:, :, :, :), allocatable :: tau47
+          ! Pre Processing
+          ! Defining the Hamiltonian Matrix Elements
 
-            ! Pre Processing
-            ! Defining the Hamiltonian Matrix Elements
+          Real (Kind=pr) ::  h0, h20(na,na), h02(na,na), h11(na,na)
+          Real (Kind=pr) ::  h40(na,na,na,na), h04(na,na,na,na)
+          Real (Kind=pr) ::  h31(na,na,na,na), h13(na,na,na,na)
+          Real (Kind=pr) ::  h221(na,na,na,na)
+          Real (Kind=pr) ::  h222(na,na,na,na)
+          Real (Kind=pr) ::  scr1(na), scr2(na,na)
+          Real (Kind=pr) ::  scr4(na,na,na,na)
 
-            Real (Kind=pr) ::  h0, h20(na,na), h02(na,na), h11(na,na)
-            Real (Kind=pr) ::  h40(na,na,na,na), h04(na,na,na,na)
-            Real (Kind=pr) ::  h31(na,na,na,na), h13(na,na,na,na)
-            Real (Kind=pr) ::  h221(na,na,na,na)
-            Real (Kind=pr) ::  h222(na,na,na,na)
-            Real (Kind=pr) ::  scr1(na), scr2(na,na)
+          h0 = Sum(y*y*e0)
 
-            h0 = Sum(y*y*e0)
+          do a=1, na
+              do b=1, na
+                  scr2(a,b) = 0.0
+                  do c=1,na
+                      scr1(c) = eri(a,c,b,c)
+                  end do
+                  scr2(a,b) = Sum(y*y*scr1)
+                  h0 = h0 + ( y(a)**2 * y(b)**2 * eri(a,b,a,b) )/2
+              end do
+              scr2(a,a) = scr2(a,a) + e0(a)
+          end do
 
-            do a=1, na
-                do b=1, na
-                    scr2(a,b) = 0.0
-                    do c=1,na
-                        scr1(c) = eri(a,c,b,c)
-                    end do
-                    scr2(a,b) = Sum(y*y*scr1)
-                    h0 = h0 + ( y(a)**2 * y(b)**2 * eri(a,b,a,b) )/2
-                end do
-                scr2(a,a) = scr2(a,a) + e0(a)
-            end do
+          !$omp parallel default(shared)
+          !$omp do schedule(static)
+          do a=1, na
+              do b=1, na
+                  h20(a,b) = x(a)*x(b)*scr2(a,b)
+                  h02(a,b) = -y(a)*y(b)*scr2(a,b)
+                  h11(a,b) = x(a)*y(b)*scr2(a,b)
+                  do c=1, na
+                      do d=1, na
+                          h40(a,b,c,d) = eri(a,b,c,d)*x(a)*x(b)*x(c)*x(d)/4.0
+                          h04(a,b,c,d) = eri(c,d,a,b)*y(a)*y(b)*y(c)*y(d)/4.0
+                          h31(a,b,c,d) = -eri(a,b,c,d)*x(a)*x(b)*y(c)*x(d)/2.0
+                          h13(a,b,c,d) = -eri(a,d,b,c)*x(a)*y(b)*y(c)*y(d)/2.0
+                          h221(a,b,c,d) = eri(a,b,c,d)*x(a)*x(b)*y(c)*y(d)/4.0
+                          h222(a,b,c,d) = eri(a,d,b,c)*x(a)*x(c)*y(b)*y(d)
+                      end do
+                  end do
+              end do
+          end do
+          !$omp end do
+          !$omp end parallel
 
-            do a=1, na
-                do b=1, na
-                    h20(a,b) = x(a)*x(b)*scr2(a,b)
-                    h02(a,b) = -y(a)*y(b)*scr2(a,b)
-                    h11(a,b) = x(a)*y(b)*scr2(a,b)
-                    do c=1, na
-                        do d=1, na
-                            h40(a,b,c,d) = eri(a,b,c,d)*x(a)*x(b)*x(c)*x(d)/4.0
-                            h04(a,b,c,d) = eri(c,d,a,b)*y(a)*y(b)*y(c)*y(d)/4.0
-                            h31(a,b,c,d) = -eri(a,b,c,d)*x(a)*x(b)*y(c)*x(d)/2.0
-                            h13(a,b,c,d) = -eri(a,d,b,c)*x(a)*y(b)*y(c)*y(d)/2.0
-                            h221(a,b,c,d) = eri(a,b,c,d)*x(a)*x(b)*y(c)*y(d)/4.0
-                            h222(a,b,c,d) = eri(a,d,b,c)*x(a)*x(c)*y(b)*y(d)
-                        end do
-                    end do
-                end do
-            end do
-            
-            allocate(tau0(1:na, 1:na))
-            allocate(tau1(1:na, 1:na))
-            allocate(tau3(1:na, 1:na))
-            allocate(tau4(1:na, 1:na))
-            allocate(tau5(1:na, 1:na))
-            allocate(tau7(1:na, 1:na))
-            allocate(tau19(1:na, 1:na))
-            allocate(tau31(1:na, 1:na))
+          allocate(tau0(1:na, 1:na))
+          allocate(tau4(1:na, 1:na))
+          allocate(tau6(1:na, 1:na))
+          allocate(tau21(1:na, 1:na))
+          
+          tau0 = h11
 
-            tau0 = h11
-            do a=1, na
-                do b=1, na
-                    tau0(a,b) = tau0(a,b) + 2*Sum(&
-                        t1*h221(a,:,b,:))
-                    tau1(a,b) = 4*Sum(t1*h221(:,a,:,b))
-                    tau3(a,b) = Sum(t1*h31(:,a,:,b))
-                    tau7(a,b) = 2*Sum(t1*h13(:,:,a,b))
-                end do
-            end do
-            tau1 = tau1 + h11
-            tau4 = MatMul(tau1,Transpose(t1))
-            tau5 = tau4 + 2*tau3 - h20
-            tau19 = tau4 + 2*tau3
-            tau31 = MatMul(Transpose(tau1),t1)
+          do a=1, na
+              do b=1, na
+                  tau0(a,b) = tau0(a,b) + 2.0_pr*Sum(s1*h221(a,:,b,:))
+                  tau6(a,b) = 2.0_pr*Sum(s1*h13(:,:,a,b))
+                  tau4(a,b) = 4.0_pr*Sum(s1*h221(:,a,:,b))
+              end do
+          end do
 
-            r0 = Sum(t1*tau0) + h0 + Sum(h221*t2)
-            
-            deallocate(tau0,tau3,tau4)
-            allocate(tau8(1:na, 1:na, 1:na, 1:na))
-            allocate(tau9(1:na, 1:na, 1:na, 1:na))
-            allocate(tau10(1:na, 1:na, 1:na, 1:na))
-            allocate(tau11(1:na, 1:na, 1:na, 1:na))
-            allocate(tau37(1:na, 1:na, 1:na, 1:na))
-            allocate(tau14(1:na, 1:na, 1:na, 1:na))
-            allocate(tau17(1:na, 1:na))
-            allocate(tau21(1:na, 1:na, 1:na, 1:na))
-            allocate(tau22(1:na, 1:na, 1:na, 1:na))
-            allocate(tau26(1:na, 1:na, 1:na, 1:na))
-            allocate(tau27(1:na, 1:na, 1:na, 1:na))
-            allocate(tau28(1:na, 1:na, 1:na, 1:na))
-            allocate(tau33(1:na, 1:na, 1:na, 1:na))
-            allocate(tau34(1:na, 1:na))
-            allocate(tau38(1:na, 1:na, 1:na, 1:na))
-            allocate(tau39(1:na, 1:na, 1:na, 1:na))
-            allocate(tau40(1:na, 1:na, 1:na, 1:na))
-            allocate(tau41(1:na, 1:na, 1:na, 1:na))
-            allocate(tau42(1:na, 1:na, 1:na, 1:na))
-            allocate(tau43(1:na, 1:na, 1:na, 1:na))
-            allocate(tau46(1:na, 1:na, 1:na, 1:na))
-            allocate(tau47(1:na, 1:na, 1:na, 1:na))
+          r0 = -Sum(s1*tau0)/2.0_pr
 
-            r1 = 0.0_pr
+          tau21 = -tau6
 
-            !$omp parallel default(shared)
-            !$omp do schedule(static)
-            do a=1, na
-                do b=1, na
-                    r1(a,b) = Sum(tau1*t2(:,a,:,b)) + Sum(t1*h222(a,b,:,:)) + Sum(&
-                        h13(:,:,:,b)*t2(:,a,:,:)) - Sum(&
-                        h31(:,:,:,a)*t2(:,:,:,b))
-                    tau5(a,b) = tau5(a,b) - 2*Sum(&
-                        h221(a,:,:,:) * t2(:,b,:,:))
-                    do c=1, na
-                        do d=1, na
-                            tau8(a,b,c,d) = Sum(t1(:,d)*h222(a,b,:,c))
-                            tau10(a,b,c,d) = Sum(&
-                                h221(a,:,b,:)*t2(:,c,:,d))
-                        end do
-                    end do
-                end do
-            end do
-            !$omp end do
-            !$omp end parallel
+          do a=1, na
+              do b=1, na
+                  r1(a,b) = Sum(tau4*s2(a,:,:,b))/2.0_pr
+              end do
+          end do
 
-            r1 = r1 - MatMul(Transpose(tau5),t1)
-            tau31 = tau31 - tau7 - h02
-            tau7 = tau7 + h02
-            tau19 = tau19 - h20
+          deallocate(tau0)
+          allocate(tau5(1:na, 1:na))
+          allocate(tau22(1:na, 1:na))
 
-            !$omp parallel default(shared)
-            !$omp do schedule(static)
-            do a=1, na
-                do b=1, na
-                    tau34(b,a) = Sum(h221(:,:,:,b)*t2(:,:,:,a))
-                    tau7(a,b) = tau7(a,b) + 2*Sum(&
-                        h221(:,:,a,:)*t2(:,:,:,b))
-                    tau17(a,b) = Sum(h221(:,a,:,:)*t2(:,b,:,:))
-                    do c=1, na
-                        do d=1, na
-                            tau9(a,b,c,d) = Sum(&
-                                t1(c,:)*tau8(a,b,:,d))
-                            tau11(a,b,c,d) = Sum(&
-                                t1(:,b)*tau10(:,a,c,d))
-                            tau14(a,b,c,d) = 2*Sum(t1(:,d)*h31(:,a,b,c)) +&
-                                h222(c,d,a,b)
-                            tau21(a,b,c,d) = Sum(h31(:,:,a,b)*t2(:,:,c,d))
-                            tau22(a,b,c,d) = Sum(t1(:,d)*h31(a,:,b,c))
-                            tau27(a,b,c,d) = Sum(t1(:,d)*h13(:,a,b,c))
-                            tau40(a,b,c,d) = Sum(h13(:,a,:,b)*t2(:,c,:,d))
-                            tau43(a,b,c,d) = Sum(t1(d,:)*h221(a,b,c,:))
-                        end do
-                    end do
-                end do
-            end do
-            !$omp end do
-            !$omp end parallel
+          tau4 = tau4 + h11
+          tau5 = MatMul(Transpose(tau4),s1)
+          tau6 = tau6 - tau5 + h02
+          tau21 = tau21 + tau5
+          tau22 = MatMul(tau4,Transpose(s1))
 
-            !$omp parallel default(shared)
-            !$omp do schedule(static)
-            do a=1, na
-                do b=1, na
-                    do c=1, na
-                        do d=1, na
-                            tau9(a,b,c,d) = tau9(a,b,c,d) + &
-                                4*Sum(t1(a,:)*tau11(:,b,c,d)) -&
-                                Sum(t2(:,c,:,d)*tau14(:,:,a,b))
-                            tau37(a,b,c,d) = 2*Sum(&
-                                t2(:,a,:,c)*tau10(:,:,b,d)) + Sum(&
-                                tau34(:,d)*t2(a,b,:,c))
-                            tau26(a,b,c,d) = -2*Sum(&
-                                tau17(:,b)*t2(:,a,c,d)) + Sum(&
-                                tau19(:,a)*t2(:,b,c,d))
-                            tau21(a,b,c,d) = tau21(a,b,c,d) +&
-                                2*Sum(t1(:,c)*tau22(:,a,b,d))
-                            tau28(a,b,c,d) = Sum(t1(c,:)*tau27(a,:,b,d))
-                            tau38(a,b,c,d) = Sum(h13(a,:,:,b)*t2(c,d,:,:))
-                            tau41(a,b,c,d) = Sum(t1(b,:)*tau40(:,a,c,d))
-                            tau42(a,b,c,d) = Sum(h221(a,b,:,:)*t2(c,d,:,:)) + &
-                                2*Sum(t1(c,:)*tau43(a,b,:,d)) + 2*h40(a,b,c,d)
-                        end do
-                    end do
-                end do
-            end do
-            !$omp end do
-            !$omp end parallel
+          do a=1, na
+              do b=1, na
+                  tau6(a,b) = tau6(a,b) + &
+                      2.0_pr*Sum(h221(:,:,a,:)*s2(:,:,:,b))
+              end do
+          end do
 
-            r1 = r1 + MatMul(t1,tau7) + h11
+          r1 = r1 - MatMul(s1,tau6)/2.0_pr
 
-            r2 = 4*h221
+          deallocate(tau4, tau5, tau6)
+          allocate(tau8(1:na, 1:na))
 
-            !$omp parallel default(shared)
-            !$omp do schedule(static)
-            do a=1, na
-                do b=1, na
-                    r2(a,b,:,:) = r2(a,b,:,:)-tau9(a,:,b,:) + Transpose(tau9(a,:,b,:)) &
-                        + tau9(b,:,a,:) - Transpose(tau9(b,:,a,:))
-                    do c=1, na
-                        do d=1, na
-                            tau26(a,b,c,d) = tau26(a,b,c,d) + Sum( &
-                                t1(b,:) * tau21(:,a,c,d))
-                            tau33(a,b,c,d) = 2*Sum(t1(b,:)*tau28(:,a,c,d)) -&
-                                Sum(tau31(:,a)*t2(b,c,:,d))
-                            tau39(a,b,c,d) = Sum(t1(:,b)*tau38(:,a,c,d))
-                            tau46(a,b,c,d) = Sum(t1(:,d)*tau42(:,a,b,c)) - &
-                                h31(b,c,d,a)
-                            tau47(a,b,c,d) = h13(d,b,c,a) + 2*Sum(&
-                                t1(d,:)*h04(:,a,b,c))
-                        end do
-                    end do
-                end do
-            end do
-            !$omp end do
-            !$omp end parallel
+          scr4 = 0.0_pr
 
-            deallocate(tau1,tau5,tau7,tau8,tau9,tau10,tau11,&
-                tau14,tau17,tau19,tau21,tau22,tau27,&
-                tau28,tau31,tau34,tau38,tau40,tau43)
+          do a=1, na
+              do b=1, na
+                  tau8(a,b) = -2.0_pr*Sum(s1*h31(:,a,:,b))
+              end do
+          end do
 
-            !$omp parallel default(shared)
-            !$omp do schedule(static)
-            do a=1, na
-                do b=1, na
-                    r2(a,b,:,:) = r2(a,b,:,:) - tau26(a,b,:,:) + &
-                        tau26(b,a,:,:) +  tau33(:,a,b,:) - &
-                        Transpose(tau33(:,a,b,:)) + 2*tau37(a,b,:,:) - &
-                        2*Transpose(tau37(a,b,:,:)) + tau39(:,:,a,b) - &
-                        Transpose(tau39(:,:,a,b)) - 2*tau41(:,a,b,:) + &
-                        2*tau41(:,b,a,:) + 2*Transpose(tau41(:,a,b,:)) - &
-                        2*Transpose(tau41(:,b,a,:))
-                    do c=1, na
-                        do d=1, na
-                            r2(a,b,c,d) = r2(a,b,c,d) + Sum(&
-                                t2(:,:,c,d)*tau42(:,:,a,b)) + 2*Sum(&
-                                t1(:,d)*tau46(:,a,b,c)) + 2*Sum(&
-                                t1(b,:)*tau47(:,c,d,a)) + 2*Sum(&
-                                h04(:,:,c,d)*t2(a,b,:,:)) - 2*Sum(&
-                                t1(a,:)*h13(b,c,d,:)) + 2*Sum(&
-                                t1(:,c)*h31(a,b,d,:))
-                        end do
-                    end do
-                end do
-            end do
-            !$omp end do
-            !$omp end parallel
+          do a=1, na
+              do b=1, na
+                  do c=1, na
+                      do d=1, na
+                          scr4(a,b,c,d) = Sum(&
+                              tau8(:,b)*s2(:,a,c,d) &
+                              )/4.0_pr
+                      end do
+                  end do
+              end do
+          end do
 
-            deallocate(tau26,tau33,tau37,tau39,tau41,tau42,tau46,tau47)
+          tau8 = tau8 + h20
 
-            ECC = r0 + Sum(Z1*r1) + Sum(Z2*r2)
+          do a=1, na
+              do b=1, na
+                  tau8(a,b) = tau8(a,b) + 2.0_pr * Sum(&
+                      h221(a,:,:,:)*s2(:,b,:,:))
+              end do
+          end do
 
-       End Subroutine EvalEnergy
+          r1 = r1 - MatMul(Transpose(tau8),s1)/2.0_pr
+
+          deallocate(tau8)
+          allocate(tau11(1:na, 1:na, 1:na, 1:na))
+          allocate(tau12(1:na, 1:na, 1:na, 1:na))
+          allocate(tau13(1:na, 1:na, 1:na, 1:na))
+          allocate(tau14(1:na, 1:na, 1:na, 1:na))
+          allocate(tau15(1:na, 1:na, 1:na, 1:na))
+          allocate(tau16(1:na, 1:na, 1:na, 1:na))
+          allocate(tau17(1:na, 1:na, 1:na, 1:na))
+          allocate(tau18(1:na, 1:na, 1:na, 1:na))
+          allocate(tau19(1:na, 1:na, 1:na, 1:na))
+          allocate(tau23(1:na, 1:na, 1:na, 1:na))
+
+          tau11 = 0.0_pr
+          tau12 = 0.0_pr
+          tau13 = 0.0_pr
+          tau14 = 0.0_pr
+          tau15 = 0.0_pr
+          tau16 = 0.0_pr
+          tau17 = 0.0_pr
+          tau18 = 0.0_pr
+          tau19 = 0.0_pr
+          tau23 = 0.0_pr
+
+          tau14 = h13
+          tau16 = h04
+
+          !$omp parallel default(shared)
+          !$omp do schedule(static)
+          do a=1, na
+              do b=1, na
+                  do c=1, na
+                      do d=1, na
+                          tau13(a,b,c,d) = Sum(&
+                              h221(a,b,:,:)*s2(c,d,:,:))
+                          tau11(a,b,c,d) = Sum(&
+                              s1(d,:)*h221(a,b,c,:))
+                          tau14(a,b,c,d) = tau14(a,b,c,d) + &
+                              2.0_pr * Sum(s1(:,d)*h221(:,a,b,c))
+                          tau16(a,b,c,d) = tau16(a,b,c,d) + &
+                              Sum(s1(:,d)*h13(:,a,b,c))
+                          tau17(a,b,c,d) = Sum(&
+                              s1(:,d)*h31(:,a,b,c)) + Sum(&
+                              h221(a,:,b,:)*s2(:,c,:,d))
+                          tau19(a,b,c,d) = - h222(d,c,a,b) + &
+                              Sum(s1(d,:)*h13(a,:,b,c))
+                          tau23(a,b,c,d) = h13(d,b,c,a) + Sum(&
+                              s1(d,:)*h04(:,a,b,c))
+                      end do
+                  end do
+              end do
+          end do
+          !$omp end do
+          !$omp end parallel
+
+          do a=1, na
+              do b=1, na
+                  tau18(a,b,:,:) = Transpose(tau13(a,b,:,:))
+                  tau21(a,b) = tau21(a,b) + 2.0_pr*Sum(&
+                      h221(:,:,:,a)*s2(:,:,:,b))
+                  tau22(a,b) = tau22(a,b) + 2.0_pr*Sum(&
+                      h221(:,a,:,:)*s2(:,b,:,:))
+              end do
+          end do
+
+          tau11 = tau11 + h31
+          tau13 = tau13 + 2.0_pr * h40
+          tau21 = tau21 - h02
+          tau22 = tau22 - h20
+
+          !$omp parallel default(shared)
+          !$omp do schedule(static)
+          do a=1, na
+              do b=1, na
+                  do c=1, na
+                      do d=1, na
+                          tau12(a,b,c,d) = Sum(&
+                              s1(d,:)*tau11(a,b,:,c))
+                          tau15(a,b,c,d) = 2.0_pr*( &
+                              Sum(s1(c,:)*tau14(a,:,b,d))&
+                              ) - h222(c,d,a,b)
+                      end do
+                  end do
+                  tau13(a,b,:,:) = tau13(a,b,:,:) + &
+                      2.0_pr * Transpose(tau12(a,b,:,:))
+                  tau18(a,b,:,:) = tau18(a,b,:,:) + &
+                      2.0_pr * tau12(a,b,:,:) + &
+                      2.0_pr * Transpose(h40(a,b,:,:))
+              end do
+          end do
+          !$omp end do
+          !$omp end parallel
+
+          allocate(tau20(1:na, 1:na, 1:na, 1:na))
+
+          !$omp parallel default(shared)
+          !$omp do schedule(static)
+          do a=1, na
+              do b=1, na
+                  do c=1, na
+                      do d=1, na
+                          scr4(a,b,c,d) = scr4(a,b,c,d) - &
+                              Sum(s2(:,:,c,d)*tau13(:,:,a,b))/8.0_pr + &
+                              Sum(s2(:,b,:,d)*tau15(:,:,a,c))/2.0_pr - &
+                              Sum(s2(a,b,:,:)*tau16(:,:,c,d))/4.0_pr + &
+                              Sum(s2(:,a,:,d)*tau17(:,:,b,c)) + &
+                              Sum(tau21(:,c)*s2(a,b,:,d))/4.0_pr + &
+                              Sum(tau22(:,a)*s2(:,b,c,d))/4.0_pr
+                          tau20(a,b,c,d) = Sum(&
+                              s1(:,b)*tau18(:,c,d,a)) + 2.0_pr*Sum(&
+                              s1(d,:)*tau19(c,:,b,a))
+                      end do
+                  end do
+              end do
+          end do
+          !$omp end do
+          !$omp end parallel
+
+          !$omp parallel default(shared)
+          !$omp do schedule(static)
+          do a=1, na
+              do b=1, na
+                  do c=1, na
+                      do d=1, na
+                          scr4(a,b,c,d) = scr4(a,b,c,d) - Sum(&
+                              s1(:,d)*tau20(a,c,:,b))/4.0_pr - Sum(&
+                              s1(b,:)*tau23(:,c,d,a))/2.0_pr - Sum(&
+                              s1(:,c)*h31(a,b,d,:))/2.0_pr
+                      end do
+                  end do
+              end do
+          end do
+          !$omp end do
+          !$omp end parallel
+
+          deallocate(&
+              tau11, tau12, tau13, tau14, tau15, tau16, tau17, tau18, &
+              tau19, tau20, tau21, tau22, tau23 &
+              )
+
+          r0 = r0 - (h0 + Sum(h221*s2))/2.0_pr
+          r1 = r1 - h11/2.0_pr
+          scr4 = scr4 - h221/2.0_pr
+          r2 = 0.0_pr
+
+          do a=1, na
+              do b=1, na
+                  r1(a,b) = r1(a,b) + Sum(h11*s2(a,:,:,b))/2.0_pr - &
+                      Sum(s1*h222(a,b,:,:))/2.0_pr + &
+                      Sum(h31(:,:,:,a)*s2(:,:,:,b))/2.0_pr - &
+                      Sum(h13(:,:,:,b)*s2(:,a,:,:))/2.0_pr
+                  do c=1, na
+                      do d=1, na
+                          r2(a,b,c,d) = scr4(a,b,c,d) - scr4(b,a,c,d) &
+                              - scr4(a,b,d,c) + scr4(b,a,d,c)
+                      end do
+                  end do
+              end do
+          end do
+
+          Energy = -2.0_pr*(R0 + Sum(Z1*R1) + Sum(Z2*R2))
+
+      End Subroutine EvalEnergy
+
+      Subroutine EvalNumber(S1, S2, Z1, Z2, NA, X, Y, Num)
+          Implicit None
+          Integer, parameter  :: pr = Selected_Real_Kind(15,307)
+          Integer, Intent(In) :: NA
+          Real (Kind=pr), Intent(In) :: X(NA), Y(NA)
+          Real (Kind=pr), Intent(In) :: S1(NA,NA), Z1(NA,NA)
+          Real (Kind=pr), Intent(In) :: S2(NA,NA,NA,NA), Z2(NA,NA,NA,NA)
+          Real (Kind=pr)    :: R1(NA,NA)
+          Real (Kind=pr)    :: R2(NA,NA,NA,NA)
+          Real (Kind=pr)    :: R0
+          Real (Kind=pr), Intent(Out) :: Num
+          Integer :: p,q,r,s
+
+          Real (Kind=pr)    ::  s1diag(na)
+
+          r0 = 0.0_pr
+          r1 = 0.0_pr
+          r2 = 0.0_pr
+
+          s1diag = 0.0_pr
+
+          do p=1, na
+              s1diag(p) = s1(p,p)
+          end do
+
+          !$omp parallel default(shared)
+          !$omp do schedule(static)
+          do p=1, na
+              do q=1, na
+                  r1(p,q) = (x(p)**2 - y(q)**2)*s1(p,q) &
+                      - Sum(s1(:,q)*s1(p,:) * x * y)
+                  do r=1, na
+                      r1(p, q) = r1(p, q) + s2(r, p, r, q)*x(r)*y(r)
+                      do s=1, na
+                          r2(p,q,r,s) = s2(p,q,r,s)*( &
+                              x(p)**2 + x(q)**2 - y(r)**2 - y(s)**2 &
+                              ) + &
+                              Sum(x*y*s1(:,s)*s2(p,q,:,r)) - &
+                              Sum(x*y*s1(:,r)*s2(p,q,:,s)) - &
+                              Sum(x*y*s1(p,:)*s2(:,q,r,s)) + &
+                              Sum(x*y*s1(q,:)*s2(:,p,r,s))
+                      end do
+                  end do
+              end do
+          end do
+          !$omp end do
+          !$omp end parallel
+
+          r0 = Sum(x*y*s1diag) + Sum(y**2)
+
+          num = r0 + Sum(z1*r1) + Sum(z2*r2)
+
+     End Subroutine EvalNumber

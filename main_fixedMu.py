@@ -64,7 +64,7 @@ def main():
     eri = evol.eri
 
     # Fix the chemical potential
-    mu = evol.h1[n_elec]/4
+    mu = evol.h1[n_elec]*0.9
     evol.h1 -= mu
 
     print('Chemical Potential set to: ',mu)
