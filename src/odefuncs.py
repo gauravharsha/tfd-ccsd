@@ -5,7 +5,7 @@ import h5py, time, numpy as np
 
 from scipy.integrate import ode
 from scipy.misc import comb
-from multiprocessing import Pool
+from numba import jit, njit
 
 from iofuncs import *
 from inttran import *
@@ -30,6 +30,34 @@ len_t2 = 0
 # Compress / DeCompress functions
 #
 
+@jit(nopython=True)
+def _decompress_t2(T2_Compressed,NSO):
+    """
+    The Idea is to use the antisymmetric property of the T2 tensor:
+        T2[p,q,r,s] = -T2[q,p,r,s]
+                    = -T2[p,q,s,r]
+        i.e. the first 2 and the last 2 indices are anti-symmetric
+
+    This allows a compressed storage of T2's but in passing the T2 amps
+    to the FORTRAN SubRoutine, we need to reconstruct the full T2
+    which is done by this function
+    """
+
+    t2_out = np.zeros((NSO,NSO,NSO,NSO))
+    m = 0
+
+    for i in range(NSO):
+        for j in range(i+1,NSO):
+            for k in range(NSO):
+                for l in range(k+1,NSO):
+                    val = T2_Compressed[m]
+                    t2_out[i,j,k,l] = val
+                    t2_out[j,i,k,l] = -val
+                    t2_out[i,j,l,k] = -val
+                    t2_out[j,i,l,k] = val
+                    m += 1
+    return t2_out
+
 def DecompressT2(T2_Compressed,NSO):
     """
     The Idea is to use the antisymmetric property of the T2 tensor:
@@ -45,26 +73,29 @@ def DecompressT2(T2_Compressed,NSO):
     if np.size(T2_Compressed) != int(comb(NSO,2)**2):
         raise ValueError('Invalid Size of the compressed T2 array',T2_Compressed)
 
-    t2_out = np.zeros((NSO,NSO,NSO,NSO))
-    m = 0
+    t2_out = _decompress_t2(T2_Compressed, NSO)
 
-    for i in range(NSO):
-
-        for j in range(i+1,NSO):
-
-            for k in range(NSO):
-
-                for l in range(k+1,NSO):
-
-                    val = T2_Compressed[m]
-                    t2_out[i,j,k,l] = val
-                    t2_out[j,i,k,l] = -val
-                    t2_out[i,j,l,k] = -val
-                    t2_out[j,i,l,k] = val
-
-                    m += 1
     return t2_out
 
+
+@jit(nopython=True)
+def _compress_t2(T2,NSO):
+    """
+    Numba parallelized function for Compressing 4-fold antisymmetric tensors
+    """
+
+    m = 0
+    _t2_compressed = np.zeros( int( (NSO*(NSO-1)/2)**2 ) )
+
+    for i in range(NSO):
+        for j in range(i+1,NSO):
+            for k in range(NSO):
+                for l in range(k+1,NSO):
+                    val = T2[i,j,k,l]
+                    _t2_compressed[m] = val
+                    m += 1
+
+    return _t2_compressed
 
 def CompressT2(T2):
     """
@@ -81,30 +112,21 @@ def CompressT2(T2):
                                         (0,1,1,2) -> .... and so on...
     """
     NSO = np.size(T2,axis=0)
-    m = 0
-    T2_compressed = np.zeros( int( comb(NSO,2)**2 ) )
 
-    for i in range(NSO):
-        for j in range(i+1,NSO):
-            for k in range(NSO):
-                for l in range(k+1,NSO):
+    # Check symmetries first
+    chk_fail = 0
+    if np.max(np.abs(T2 + np.einsum('qprs->pqrs',T2))) > t2_symm_tol:
+        chk_fail = 1
+    elif np.max(np.abs(T2 + np.einsum('pqsr->pqrs',T2))) > t2_symm_tol:
+        chk_fail = 1
+    else:
+        pass
 
-                    val = T2[i,j,k,l]
+    if chk_fail:
+        raise ValueError('Incorrect Symmetry for the input Tensor')
 
-                    chk1 = np.isclose(T2[j,i,k,l],-val,rtol=t2_symm_tol)
-                    chk2 = np.isclose(T2[i,j,l,k],-val,rtol=t2_symm_tol)
-                    chk3 = np.isclose(T2[j,i,l,k],val,rtol=t2_symm_tol)
+    T2_compressed = _compress_t2(T2,NSO)
 
-                    if chk1 and chk2 and chk3:
-                        T2_compressed[m] = val
-                        m += 1
-                    else:
-                        print('T2[{},{},{},{}] = {}'.format(i,j,k,l,T2[i,j,k,l]))
-                        print('T2[{},{},{},{}] = {}'.format(j,i,k,l,T2[j,i,k,l]))
-                        print('T2[{},{},{},{}] = {}'.format(i,j,l,k,T2[i,j,l,k]))
-                        print('T2[{},{},{},{}] = {}'.format(j,i,l,k,T2[j,i,l,k]))
-                        raise ValueError('Incorrect Symmetry for the input Tensor',T2)
-    
     return T2_compressed
 
 #
