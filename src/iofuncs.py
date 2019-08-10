@@ -114,8 +114,16 @@ class IOps:
         attr_list2 = tuple((atr,h1_dset.attrs[atr]) for atr in attributes)
         attr_list2 = sorted(attr_list2)
     
+        # Get the dataset for HF eigenvalues and its attributes
+        eigs_dset = f1['eigs']
+        eigs = eigs_dset[:]
+
+        attributes = list(eigs_dset.attrs)
+        attr_list3 = tuple((atr,eigs_dset.attrs[atr]) for atr in attributes)
+        attr_list3 = sorted(attr_list1)
+
         # Compare the attributes
-        if attr_list1 != attr_list2:
+        if (attr_list1 != attr_list2) and (attr_list1 != attr_list3):
             raise ValueError('The attributes of the Energy and ERI data in the file ',fname,' do not match')
         
         # Print the attribute data
@@ -133,7 +141,7 @@ class IOps:
         f1.close()
         
         # return the integrals and the attribute list
-        return h1, eri, attr_list1
+        return eigs, h1, eri, attr_list1
     
     
     def createh5(self, fp, dsets, max_size, attrs):

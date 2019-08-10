@@ -23,7 +23,7 @@ def test_inttran2():
 
     # First read the file and the input
     iops = IOps(inp_file='TestInput')
-    h1, eri, attrs = iops.loadHDF()
+    eigs, h1, eri, attrs = iops.loadHDF()
 
     # Next do the IntTran2
     hdiag, evecs = IntTran2(h1)
@@ -43,7 +43,7 @@ def test_inttran4():
 
     # First read the file and the input
     iops = IOps(inp_file='TestInput')
-    h1, eri, attrs = iops.loadHDF()
+    eigs, h1, eri, attrs = iops.loadHDF()
 
     # Next do the IntTran2
     hdiag, evecs = IntTran2(h1)

@@ -60,6 +60,7 @@ def main():
     fug = evol.fug
 
     # Integrals
+    eigs = evol.eigs
     h1 = evol.h1
     eri = evol.eri
     
@@ -93,7 +94,7 @@ def main():
     ci_amps = np.zeros(1 + len_t1 + len_t2)
 
     # HFB parameters
-    x = 1/np.sqrt( 1 + np.exp(-evol.beta_in*h1 + evol.alpha_in)*fug )
+    x = 1/np.sqrt( 1 + np.exp(-evol.beta_in*eigs + evol.alpha_in)*fug )
     y = np.sqrt( 1 - x**2 )
 
     # These are the actual t1 and t2 matrices
@@ -124,9 +125,6 @@ def main():
     ]
 
     evol.createh5(fout, output_dsets, beta_pts, evol.attrs)
-
-    # save the evecs
-    fout.create_dataset('evecs',data=evol.evecs)
 
     # the amplitudes datasets will have to be handled separately
     fout.create_dataset('cc_amps',(beta_pts,1+len_t1+len_t2))
@@ -181,7 +179,7 @@ def main():
         evol.BisectionAndAlphaIntegrate()
 
         # New HFB parameters
-        x = 1/np.sqrt( 1 + np.exp(-evol.beta_in*h1 + evol.alpha_in)*fug )
+        x = 1/np.sqrt( 1 + np.exp(-evol.beta_in*eigs + evol.alpha_in)*fug )
         y = np.sqrt( 1 - x**2 )
 
         # Extract the amplitudes

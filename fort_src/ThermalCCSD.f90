@@ -1,8 +1,8 @@
-      Subroutine BetaCC(E0, ERI, S1, S2, NA, X, Y, R0, R1, R2)
+      Subroutine BetaCC(E0, OneH, ERI, S1, S2, NA, X, Y, R0, R1, R2)
           Implicit None
           Integer, parameter  :: pr = Selected_Real_Kind(15,307)
           Integer, Intent(In) :: NA
-          Real (Kind=pr), Intent(In) :: E0(Na), ERI(NA,NA,NA,NA)
+          Real (Kind=pr), Intent(In) :: E0(Na), OneH(Na,Na), ERI(NA,NA,NA,NA)
           Real (Kind=pr), Intent(In) :: X(NA), Y(NA)
           Real (Kind=pr), Intent(In) :: S1(NA,NA)
           Real (Kind=pr), Intent(In) :: S2(NA,NA,NA,NA)
@@ -42,18 +42,18 @@
           Real (Kind=pr) ::  scr1(na), scr2(na,na)
           Real (Kind=pr) ::  scr4(na,na,na,na)
 
-          h0 = Sum(y*y*e0)
+          h0 = 0.0_pr
 
           do a=1, na
+              h0 = h0 + y(a)*y(a)*oneh(a,a)
               do b=1, na
                   scr2(a,b) = 0.0
                   do c=1,na
                       scr1(c) = eri(a,c,b,c)
                   end do
-                  scr2(a,b) = Sum(y*y*scr1)
+                  scr2(a,b) = Sum(y*y*scr1) + oneh(a,b)
                   h0 = h0 + ( y(a)**2 * y(b)**2 * eri(a,b,a,b) )/2
               end do
-              scr2(a,a) = scr2(a,a) + e0(a)
           end do
 
           !$omp parallel default(shared)

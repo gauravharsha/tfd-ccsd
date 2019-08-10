@@ -1,11 +1,11 @@
-      Subroutine BetaCI(E0,ERI,T1,T2,NA,X,Y,R0,R1,R2)
+      Subroutine BetaCI(E0,OneH,ERI,T1,T2,NA,X,Y,R0,R1,R2)
           Implicit None
 
           Integer, parameter  :: pr = Selected_Real_Kind(15,307)
           Integer, Intent(In) :: NA
           Real (Kind=pr), Intent(In) :: X(NA), Y(NA)
           Real (Kind=pr), Intent(In) :: T1(NA,NA), T2(NA,NA,NA,NA)
-          Real (Kind=pr), Intent(In) :: E0(NA), ERI(NA,NA,NA,NA)
+          Real (Kind=pr), Intent(In) :: E0(NA), OneH(NA,NA),  ERI(NA,NA,NA,NA)
           Real (Kind=pr), Intent(Out) :: R0
           Real (Kind=pr), Intent(Out) :: R1(NA,NA)
           Real (Kind=pr), Intent(Out) :: R2(NA,NA,NA,NA)
@@ -33,20 +33,20 @@
           Real (Kind=pr) ::  h222(na,na,na,na)
           Real (Kind=pr) ::  scr1(na), scr2(na,na), delK(na,na)
 
-          h0 = Sum(y*y*e0)
+          h0 = 0.0_pr
           delK = 0.0_pr
 
           do a=1, na
+              h0 = h0 + y(a)*y(a)*oneh(a,a)
               delK(a,a) = 1.0_pr
               do b=1, na
                   scr2(a,b) = 0.0_pr
                   do c=1,na
                       scr1(c) = eri(a,c,b,c)
                   end do
-                  scr2(a,b) = Sum(y*y*scr1)
+                  scr2(a,b) = Sum(y*y*scr1) + oneh(a,b)
                   h0 = h0 + ( y(a)**2 * y(b)**2 * eri(a,b,a,b) )/2
               end do
-              scr2(a,a) = scr2(a,a) + e0(a)
           end do
 
           do a=1, na

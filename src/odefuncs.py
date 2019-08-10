@@ -168,7 +168,7 @@ def ci_to_cc_transform(CI_amps, CC_amps, Nso):
 # Evolution Driver Functions
 # 
 
-def cc_beta_evolve(Beta,Amps,Alpha,Fug,OneH,ERI):
+def cc_beta_evolve(Beta,Amps,Alpha,Fug,eigs,OneH,ERI):
     """
     Driver function for the Beta evolution of Thermal CCSD
     Inputs:
@@ -176,17 +176,18 @@ def cc_beta_evolve(Beta,Amps,Alpha,Fug,OneH,ERI):
             Amps    ::  Collection of CCSD-amplitudes
             Alpha   ::  Current Alpha Value
             Fug     ::  (fugacity?) indicating initial exp(Alpha*Beta)
-            OneH    ::  1D array of one-body energy eigenvalues
+            eigs    ::  1D array of one-body energy eigenvalues
+            OneH    ::  1-electron integral
             ERI     ::  2-electron integral
     Returns:
             Concatenated array of unique R0,R1(pq) and R2(pqrs)
     """
 
     # Number of Spin Orbitals
-    NSO = np.size(OneH,axis=0)
+    NSO = np.size(eigs,axis=0)
 
     # Thermal HFB parameters
-    U = 1/np.sqrt( 1 + np.exp(-Beta*OneH + Alpha)*Fug )
+    U = 1/np.sqrt( 1 + np.exp(-Beta*eigs + Alpha)*Fug )
     V = np.sqrt( 1 - U**2 )
 
     # Extract the amplitudes
@@ -194,7 +195,7 @@ def cc_beta_evolve(Beta,Amps,Alpha,Fug,OneH,ERI):
     T2 = DecompressT2( Amps[1+len_t1:], NSO )
 
     # Get the residuals
-    r0, r1, r2 = betacc(OneH,ERI,T1,T2,U,V)
+    r0, r1, r2 = betacc(eigs,OneH,ERI,T1,T2,U,V)
 
     # Antisymmetrize r2
     s2 = (
@@ -215,7 +216,7 @@ def cc_beta_evolve(Beta,Amps,Alpha,Fug,OneH,ERI):
     return out
 
 
-def ci_beta_evolve(Beta,Amps,Alpha,Fug,OneH,ERI):
+def ci_beta_evolve(Beta,Amps,Alpha,Fug,eigs,OneH,ERI):
     """
     Driver function for the Beta evolution of Thermal CISD
     Inputs:
@@ -223,17 +224,18 @@ def ci_beta_evolve(Beta,Amps,Alpha,Fug,OneH,ERI):
             Amps    ::  Collection of CCSD-amplitudes
             Alpha   ::  Current Alpha
             Fug     ::  (fugacity?) indicating initial exp(Alpha*Beta)
-            OneH    ::  1D array of one-body energy eigenvalues
+            eigs    ::  1D array of one-body energy eigenvalues
+            OneH    ::  1-electron integral
             ERI     ::  2-electron integral
     Returns:
             Concatenated array of unique R0,R1(pq) and R2(pqrs)
     """
 
     # Number of Spin Orbitals
-    NSO = np.size(OneH,axis=0)
+    NSO = np.size(eigs,axis=0)
 
     # Thermal HFB parameters
-    U = 1/np.sqrt( 1 + np.exp(-Beta*OneH + Alpha)*Fug )
+    U = 1/np.sqrt( 1 + np.exp(-Beta*eigs + Alpha)*Fug )
     V = np.sqrt( 1 - U**2 )
 
     # Extract the amplitudes
@@ -241,7 +243,7 @@ def ci_beta_evolve(Beta,Amps,Alpha,Fug,OneH,ERI):
     T2 = DecompressT2( Amps[1+len_t1:], NSO )
 
     # Get the residuals
-    r0, r1, r2 = betaci(OneH,ERI,T1,T2,U,V)
+    r0, r1, r2 = betaci(eigs,OneH,ERI,T1,T2,U,V)
 
     # Antisymmetrize r2
     s2 = (
@@ -260,7 +262,7 @@ def ci_beta_evolve(Beta,Amps,Alpha,Fug,OneH,ERI):
     return np.concatenate(( [dt0_dbeta], dt1_dbeta, dt2_dbeta ))
 
 
-def cc_alpha_evolve(Alpha,Amps,Beta,Fug,OneH):
+def cc_alpha_evolve(Alpha,Amps,Beta,Fug,eigs):
     """
     Driver function for the Alpha evolution of Thermal CCSD
     Inputs:
@@ -268,16 +270,16 @@ def cc_alpha_evolve(Alpha,Amps,Beta,Fug,OneH):
             Amps    ::  Collection of CCSD-amplitudes
             Beta    ::  Current Temperature
             Fug     ::  (fugacity?) indicating initial exp(Alpha*Beta)
-            OneH    ::  1D array of one-body energy eigenvalues
+            eigs    ::  1D array of one-body energy eigenvalues
     Returns:
             Concatenated array of unique R0,R1(pq) and R2(pqrs)
     """
 
     # Number of Spin Orbitals
-    NSO = len(OneH)
+    NSO = len(eigs)
 
     # Thermal HFB parameters
-    U = 1/np.sqrt( 1 + np.exp(-Beta*OneH + Alpha)*Fug )
+    U = 1/np.sqrt( 1 + np.exp(-Beta*eigs + Alpha)*Fug )
     V = np.sqrt( 1 - U**2 )
 
     # Extract the amplitudes
@@ -304,7 +306,7 @@ def cc_alpha_evolve(Alpha,Amps,Beta,Fug,OneH):
     return np.concatenate(( [dt0_dbeta], dt1_dbeta, dt2_dbeta ))
 
 
-def ci_alpha_evolve(Alpha,Amps,Beta,Fug,OneH):
+def ci_alpha_evolve(Alpha,Amps,Beta,Fug,eigs):
     """
     Driver function for the Alpha evolution of Thermal CISD
     Inputs:
@@ -312,16 +314,16 @@ def ci_alpha_evolve(Alpha,Amps,Beta,Fug,OneH):
             Amps    ::  Collection of CCSD-amplitudes
             Beta    ::  Current Temperature
             Fug     ::  (fugacity?) indicating initial exp(Alpha*Beta)
-            OneH    ::  1D array of one-body energy eigenvalues
+            eigs    ::  1D array of one-body energy eigenvalues
     Returns:
             Concatenated array of unique R0,R1(pq) and R2(pqrs)
     """
 
     # Number of Spin Orbitals
-    NSO = len(OneH)
+    NSO = len(eigs)
 
     # Thermal HFB parameters
-    U = 1/np.sqrt( 1 + np.exp(-Beta*OneH + Alpha)*Fug )
+    U = 1/np.sqrt( 1 + np.exp(-Beta*eigs + Alpha)*Fug )
     V = np.sqrt( 1 - U**2 )
 
     # Extract the amplitudes
@@ -405,7 +407,7 @@ def DoIntegration(integrator, x_final):
     return yout
 
 
-def _do_beta_integration(integrators, amps, betalpha, beta_step, fug, h1, eri):
+def _do_beta_integration(integrators, amps, betalpha, beta_step, fug, eigs, h1, eri):
     """
         Perform the Beta integration - use parallel pool of processes
     """
@@ -421,8 +423,8 @@ def _do_beta_integration(integrators, amps, betalpha, beta_step, fug, h1, eri):
     alpha_in = betalpha[1]
 
     # Set the initial condition
-    cc_integrator.set_initial_value(cc_amps, beta_in).set_f_params(alpha_in, fug, h1, eri)
-    ci_integrator.set_initial_value(ci_amps, beta_in).set_f_params(alpha_in, fug, h1, eri)
+    cc_integrator.set_initial_value(cc_amps, beta_in).set_f_params(alpha_in, fug, eigs, h1, eri)
+    ci_integrator.set_initial_value(ci_amps, beta_in).set_f_params(alpha_in, fug, eigs, h1, eri)
 
     cc_amps = DoIntegration(cc_integrator,beta_in + beta_step)
     ci_amps = DoIntegration(ci_integrator,beta_in + beta_step)
@@ -430,7 +432,7 @@ def _do_beta_integration(integrators, amps, betalpha, beta_step, fug, h1, eri):
     return cc_amps, ci_amps
 
 
-def _do_alpha_integration(integrators, amps, betalpha, fug, h1, n_elec, ntol):
+def _do_alpha_integration(integrators, amps, betalpha, fug, eigs, n_elec, ntol):
     """
         Bisection to find Chemical Pot / Alpha value
         and then do integration
@@ -447,7 +449,7 @@ def _do_alpha_integration(integrators, amps, betalpha, fug, h1, n_elec, ntol):
     alpha_in = betalpha[1]
 
     # Make local copies of the variables
-    nso = len(h1)
+    nso = len(eigs)
 
     # Alpha step
     global alpha_step_0g
@@ -458,7 +460,7 @@ def _do_alpha_integration(integrators, amps, betalpha, fug, h1, n_elec, ntol):
     global len_t2
 
     # HFB coefficients
-    x = 1/np.sqrt( 1 + np.exp( -beta_in*h1 + alpha_in )*fug )
+    x = 1/np.sqrt( 1 + np.exp( -beta_in*eigs + alpha_in )*fug )
     y = np.sqrt( 1 - x**2 )
 
     num = eval_number(cc_amps, ci_amps, x, y)
@@ -510,17 +512,17 @@ def _do_alpha_integration(integrators, amps, betalpha, fug, h1, n_elec, ntol):
 
             # Set initial condition for the ODE solvers
             cc_integrator.set_initial_value(cc1, mu1)
-            cc_integrator.set_f_params(beta_in, fug, h1)
+            cc_integrator.set_f_params(beta_in, fug, eigs)
 
             ci_integrator.set_initial_value(ci1, mu1)
-            ci_integrator.set_f_params(beta_in, fug, h1)
+            ci_integrator.set_f_params(beta_in, fug, eigs)
 
             # Do Evolution
             cc2 = DoIntegration(cc_integrator,mu2)
             ci2 = DoIntegration(ci_integrator,mu2)
 
             # Update HFB coefficients and check the number expectation
-            x = 1/np.sqrt( 1 + np.exp( -beta_in*h1 + mu2 )*fug)
+            x = 1/np.sqrt( 1 + np.exp( -beta_in*eigs + mu2 )*fug)
             y = np.sqrt( 1 - x**2 )
 
             num = eval_number(cc2, ci2, x, y)
@@ -569,9 +571,9 @@ def _do_alpha_integration(integrators, amps, betalpha, fug, h1, n_elec, ntol):
 
             # Set the initial condition for solver
             cc_integrator.set_initial_value(cc1, mu_bisect[0])
-            cc_integrator.set_f_params(beta_in, fug, h1)
+            cc_integrator.set_f_params(beta_in, fug, eigs)
             ci_integrator.set_initial_value(ci1, mu_bisect[0])
-            ci_integrator.set_f_params(beta_in, fug, h1)
+            ci_integrator.set_f_params(beta_in, fug, eigs)
 
             # get mu_mid
             mu_mid = np.mean(mu_bisect)
@@ -581,7 +583,7 @@ def _do_alpha_integration(integrators, amps, betalpha, fug, h1, n_elec, ntol):
             ci2 = DoIntegration(ci_integrator,mu_mid)
 
             # Update HFB Coefficients and compute N expectation
-            x = 1/np.sqrt( 1 + np.exp( - beta_in * h1 + mu_mid )*fug )
+            x = 1/np.sqrt( 1 + np.exp( - beta_in * eigs + mu_mid )*fug )
             y = np.sqrt( 1 - x**2 )
 
             # Check the current number of particles
@@ -600,9 +602,9 @@ def _do_alpha_integration(integrators, amps, betalpha, fug, h1, n_elec, ntol):
 
         # Final one-shot evolution
         cc_integrator.set_initial_value(cc_amps,alpha_in)
-        cc_integrator.set_f_params(beta_in, fug, h1)
+        cc_integrator.set_f_params(beta_in, fug, eigs)
         ci_integrator.set_initial_value(ci_amps,alpha_in)
-        ci_integrator.set_f_params(beta_in, fug, h1)
+        ci_integrator.set_f_params(beta_in, fug, eigs)
         
         # Do Evolution
         cc_amps_out = DoIntegration(cc_integrator,mu_mid)
@@ -676,12 +678,13 @@ class Evolution(IOps):
     def setUpInts(self):
 
         # Read in the integrals
-        oneh, eri_in, attrs = self.loadHDF()
+        eigs, oneh, eri, attrs = self.loadHDF()
         self.attrs = attrs
 
-        # Do integral transformation
-        self.h1, self.evecs = IntTran2(oneh)
-        self.eri = IntTran4(eri_in,self.evecs)
+        # set up the class attributes
+        self.eigs = eigs
+        self.h1 = oneh
+        self.eri = eri
 
         # Define fugacity
         self.fug = self.n_elec / (self.nso - self.n_elec)
@@ -710,7 +713,7 @@ class Evolution(IOps):
             [self.cc_beta_integrator, self.ci_beta_integrator], 
             [self.cc_amps, self.ci_amps],
             [self.beta_in, self.alpha_in], 
-            self.beta_step, self.fug, self.h1, self.eri
+            self.beta_step, self.fug, self.eigs, self.h1, self.eri
         )
 
         self.beta_in += self.beta_step
@@ -728,7 +731,7 @@ class Evolution(IOps):
         be_al = [self.beta_in, self.alpha_in]
 
         cc_amps, ci_amps, al_mid = _do_alpha_integration(
-            intgrs,amps,be_al, self.fug, self.h1, self.n_elec, self.ntol
+            intgrs,amps,be_al, self.fug, self.eigs, self.n_elec, self.ntol
         )
 
         self.alpha_in = al_mid

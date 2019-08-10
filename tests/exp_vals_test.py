@@ -9,6 +9,7 @@ from iofuncs import *
 from inttran import *
 from odefuncs import *
 
+from ThermalCCSD import *
 from ExpVals import *
 
 #########################################################################
@@ -25,12 +26,8 @@ def test_eval_energ_and_num():
 
     # Load the Integrals first
     iops = IOps(inp_file='TestInput')
-    h1, eri_in, attrs = iops.loadHDF()
+    eigs, h1, eri, attrs = iops.loadHDF()
     nso = iops.nso
-
-    # Next do the IntTran2
-    hdiag, evecs = IntTran2(h1)
-    eri = IntTran4(eri_in,evecs)
 
     # Construct t1 and t2 = use Tom's MasterCode
     nocc = 6
@@ -40,7 +37,7 @@ def test_eval_energ_and_num():
     t1 = np.einsum('ia->ai',t1_pre)
 
     t2 = np.loadtxt('T2AMP')
-    t2_pre = eri_in*0
+    t2_pre = eri*0
     m = 0
     for i in range(nocc):
         for j in range(nocc):
@@ -49,10 +46,6 @@ def test_eval_energ_and_num():
                 m += 1
     t2 = np.einsum('ijab->abij',t2_pre)
 
-    # Transform the basis
-    s1 = np.transpose(evecs) @ t1 @ evecs
-    s2 = IntTran4(t2,evecs)
-
     # Other parameters needed for residuals
     y = np.zeros(nso)
     for i in range(nocc):
@@ -60,19 +53,19 @@ def test_eval_energ_and_num():
     x = np.sqrt(1 - y**2)
 
     # Eval Energy -- directly from fortran routines
-    energy_f = evalenergy(hdiag, eri, s1, s2, s1*0, s2*0, x, y)
-    number_f = evalnumber(s1, s2, s1*0, s2*0, x, y)
+    energy_f = evalenergy(h1, eri, t1, t2, t1*0, t2*0, x, y)
+    number_f = evalnumber(t1, t2, t1*0, t2*0, x, y)
 
     # Eval Energy -- from python wrappers
-    cc_amps = np.concatenate(([0],np.reshape(s1,nso**2),CompressT2(s2)))
+    cc_amps = np.concatenate(([0],np.reshape(t1,nso**2),CompressT2(t2)))
     ci_amps = cc_amps * 0.0
 
-    energy_p = eval_energy(hdiag, eri, cc_amps, ci_amps, x, y)
+    energy_p = eval_energy(h1, eri, cc_amps, ci_amps, x, y)
     number_p = eval_number(cc_amps, ci_amps, x, y)
 
     # Eval Twobody expectation value for Energy and number
-    energy_twobody = evaltwobodyh(np.diag(hdiag), eri, s1, s2, s1*0, s2*0, x, y)
-    number_twobody = evaltwobodyh(np.eye(nso), eri*0, s1, s2, s1*0, s2*0, x, y)
+    energy_twobody = evaltwobodyh(h1, eri, t1, t2, t1*0, t2*0, x, y)
+    number_twobody = evaltwobodyh(np.eye(nso), eri*0, t1, t2, t1*0, t2*0, x, y)
 
     # Expected Values
     en_exp = -5.408955909508

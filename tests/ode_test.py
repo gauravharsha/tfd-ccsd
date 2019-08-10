@@ -61,9 +61,7 @@ def test_evolution_class_attributes():
 
     # First read the file and the input and do the formalities
     iops = IOps(inp_file='TestInput')
-    h1, eri, attrs = iops.loadHDF()
-    hdiag, evecs = IntTran2(h1)
-    eri_trans = IntTran4(eri,evecs)
+    eigs, h1, eri, attrs = iops.loadHDF()
 
     fug = iops.n_elec/(iops.nso-iops.n_elec)
     # Define the evolution class instance
@@ -74,8 +72,8 @@ def test_evolution_class_attributes():
     assert evol.nso == iops.nso
     assert evol.n_elec == iops.n_elec
     assert evol.fug == fug
-    assert evol.h1.all() == hdiag.all()
-    assert evol.eri.all() == eri_trans.all()
+    assert evol.h1.all() == h1.all()
+    assert evol.eri.all() == eri.all()
     assert evol.deqtol == iops.deqtol
     assert evol.ntol == iops.ntol
 
@@ -108,11 +106,11 @@ def test_cc_beta_evolve():
     n_elec =  evol.n_elec
     nso = evol.nso
     fug =  evol.fug
+    eigs = evol.eigs
     h1 = evol.h1
     eri = evol.eri
     deqtol = evol.deqtol
     ntol = evol.ntol
-    evecs = evol.evecs
 
     # Construct t1 and t2 = use Tom's MasterCode
     nocc = 6
@@ -131,10 +129,6 @@ def test_cc_beta_evolve():
                 m += 1
     t2 = np.einsum('ijab->abij',t2_pre)
 
-    # Transform the basis
-    s1 = np.transpose(evecs) @ t1 @ evecs
-    s2 = IntTran4(t2,evecs)
-
     # Other parameters needed for residuals
     y = np.zeros(nso)
     for i in range(nocc):
@@ -151,7 +145,7 @@ def test_cc_beta_evolve():
     alpha_in = beta_in*h1[nocc]
 
     # Check outputs from CC beta evolution
-    yout = cc_beta_evolve(beta_in, cc_amps, alpha_in, fug, h1, eri)
+    yout = cc_beta_evolve(beta_in, cc_amps, alpha_in, fug, eigs, h1, eri)
 
     r0 = yout[0]
     r1 = np.reshape(yout[1:1+nso**2],(nso,nso))
@@ -161,7 +155,7 @@ def test_cc_beta_evolve():
     assert np.shape(r2) == (nso,nso,nso,nso)
 
     # Check outputs from CC alpha evolution
-    yout = cc_alpha_evolve(alpha_in, cc_amps, beta_in, fug, h1)
+    yout = cc_alpha_evolve(alpha_in, cc_amps, beta_in, fug, eigs)
 
     r0 = yout[0]
     r1 = np.reshape(yout[1:1+nso**2],(nso,nso))
@@ -171,7 +165,7 @@ def test_cc_beta_evolve():
     assert np.shape(r2) == (nso,nso,nso,nso)
 
     # Check outputs from CI beta evolution
-    yout = ci_beta_evolve(beta_in, cc_amps, alpha_in, fug, h1, eri)
+    yout = ci_beta_evolve(beta_in, cc_amps, alpha_in, fug, eigs, h1, eri)
 
     r0 = yout[0]
     r1 = np.reshape(yout[1:1+nso**2],(nso,nso))
@@ -181,7 +175,7 @@ def test_cc_beta_evolve():
     assert np.shape(r2) == (nso,nso,nso,nso)
 
     # Check outputs from CI alpha evolution
-    yout = ci_alpha_evolve(alpha_in, cc_amps, beta_in, fug, h1)
+    yout = ci_alpha_evolve(alpha_in, cc_amps, beta_in, fug, eigs)
 
     r0 = yout[0]
     r1 = np.reshape(yout[1:1+nso**2],(nso,nso))
@@ -201,9 +195,7 @@ def test_evolution_class_beta_integration():
 
     # First read the file and the input and do the formalities
     iops = IOps(inp_file='TestInput')
-    h1, eri, attrs = iops.loadHDF()
-    hdiag, evecs = IntTran2(h1)
-    eri_trans = IntTran4(eri,evecs)
+    eigs, h1, eri, attrs = iops.loadHDF()
 
     fug = iops.n_elec/(iops.nso-iops.n_elec)
     # Define the evolution class instance
@@ -228,9 +220,7 @@ def test_evolution_class_alpha_integration():
 
     # First read the file and the input and do the formalities
     iops = IOps(inp_file='TestInput')
-    h1, eri, attrs = iops.loadHDF()
-    hdiag, evecs = IntTran2(h1)
-    eri_trans = IntTran4(eri,evecs)
+    eigs, h1, eri, attrs = iops.loadHDF()
 
     fug = iops.n_elec/(iops.nso-iops.n_elec)
     # Define the evolution class instance
@@ -241,7 +231,7 @@ def test_evolution_class_alpha_integration():
     assert evol.cc_amps.all() == np.zeros(1 + int(iops.nso**2 + comb(iops.nso,2)**2)).all()
     cc_amps0 = evol.cc_amps
 
-    x = 1/np.sqrt( 1 + np.exp(-evol.beta_in*evol.h1 + evol.alpha_in)*evol.fug )
+    x = 1/np.sqrt( 1 + np.exp(-evol.beta_in*evol.eigs + evol.alpha_in)*evol.fug )
     y = np.sqrt( 1 - x**2 )
 
     # Do Beta evolution - should not do anything!!
