@@ -58,14 +58,18 @@ def main():
     deqtol = evol.deqtol
     e_nuc = evol.e_nuc
     fug = evol.fug
+    fug = 1.0
+    evol.fug = 1.0
 
     # Integrals
+    eigs = evol.eigs
     h1 = evol.h1
     eri = evol.eri
 
     # Fix the chemical potential
-    mu = evol.h1[n_elec]*0.9
+    mu = 0.0
     evol.h1 -= mu
+    evol.eigs -= mu
 
     print('Chemical Potential set to: ',mu)
     
@@ -99,7 +103,7 @@ def main():
     ci_amps = np.zeros(1 + len_t1 + len_t2)
 
     # HFB parameters
-    x = 1/np.sqrt( 1 + np.exp(-evol.beta_in*h1 + evol.alpha_in)*fug )
+    x = 1/np.sqrt( 1 + np.exp(-evol.beta_in*eigs + evol.alpha_in)*fug )
     y = np.sqrt( 1 - x**2 )
 
     # These are the actual t1 and t2 matrices
@@ -181,7 +185,7 @@ def main():
         print('Beta = ',evol.beta_in)
 
         # New HFB parameters
-        x = 1/np.sqrt( 1 + np.exp(-evol.beta_in*h1 + evol.alpha_in)*fug )
+        x = 1/np.sqrt( 1 + np.exp(-evol.beta_in*eigs + evol.alpha_in)*fug )
         y = np.sqrt( 1 - x**2 )
 
         # Extract the amplitudes
