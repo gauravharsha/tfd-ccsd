@@ -1,5 +1,6 @@
 import numpy as np
 from h5py import File
+from os.path import expanduser, expandvars
 
 #
 # INPUT / OUTPUT RELATED FUNCTIONS
@@ -58,6 +59,8 @@ class IOps:
             line = fin.readline()
         pos = line.find(':') + 1
         self.fn = line[pos:].strip()
+        self.fn = expandvars(self.fn)
+        self.fn = expanduser(self.fn)
     
         # Number of electrons
         line = fin.readline()
