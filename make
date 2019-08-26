@@ -13,7 +13,7 @@ f2py -c --verbose --opt='-O4' -m ThermalCCSD ThermalCCSD.f90 --fcompiler=pg --f9
 
 # Use f2py to form the python modules for the Expectation Values
 # f2py -c --verbose --opt='-O4' -m ExpVals ExpVals.f90 --f90flags="-fopenmp" -lgomp
-f2py -c --verbose --opt='-O4' -m ExpVals ExpVals.f90 --fcompiler=pg --f90flags="-openmp" -lgomp
+f2py -c --verbose --opt='-O4' -m ExpVals ExpVals.f90 --fcompiler=pg --f90flags="-openmp" -lgomp -lblas
 
 # Get out to main directory
 cd ..

@@ -103,7 +103,7 @@
 
           !$omp single
           r0 = ( Sum(e0*tau1) - Sum(s1*tau0) )/2.0_pr
-          !$omp end single nowait
+          !$omp end single
 
           !$omp single
           tau21 = -tau6
@@ -223,7 +223,7 @@
 
           !$omp single
           Call Atran_dot_B(h31,s1,tau17,na,na**3,na)
-          !$omp end single nowait
+          !$omp end single
 
           !$omp single
           Call Atran_dot_B(h04,Transpose(s1),tau23,na,na**3,na)

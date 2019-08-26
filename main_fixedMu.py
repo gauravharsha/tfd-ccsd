@@ -3,6 +3,9 @@ sys.path.append('./fort_src/')
 sys.path.append('./src/')
 sys.path.append('./input/')
 
+global mu
+mu = float(sys.argv[1])
+
 import numpy as np, h5py
 from scipy.integrate import ode
 from scipy.misc import comb
@@ -67,8 +70,8 @@ def main():
     eri = evol.eri
 
     # Fix the chemical potential
-    mu = 0.0
-    evol.h1 -= mu
+    global mu
+    evol.h1 -= mu*np.eye(nso)
     evol.eigs -= mu
 
     print('Chemical Potential set to: ',mu)

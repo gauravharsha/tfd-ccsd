@@ -10,7 +10,9 @@
           Real (Kind=pr)    :: R0
           Real (Kind=pr)    :: R1(NA,NA)
           Real (Kind=pr)    :: R2(NA,NA,NA,NA)
-          Integer :: a, b, c, d, i, j
+          Real (Kind=pr)    :: Amat(NA,NA,NA,NA),Bmat(NA,NA,NA,NA)
+          Real (Kind=pr)    :: Cmat(NA,NA,NA,NA),Dmat(NA,NA,NA,NA)
+          Integer :: a, b, c, d
 
           Real (Kind=pr), dimension(:, :), allocatable :: tau0
           Real (Kind=pr), dimension(:), allocatable :: tau1
@@ -48,6 +50,7 @@
           do a=1, na
               h0 = h0 + y(a)*y(a)*oneh(a,a)
               do b=1, na
+                  scr2(a,b) = 0.0
                   do c=1,na
                       scr1(c) = eri(a,c,b,c)
                   end do
@@ -79,31 +82,41 @@
           !$omp end parallel
 
           allocate(tau0(1:na, 1:na))
+          allocate(tau1(1:na))
           allocate(tau4(1:na, 1:na))
           allocate(tau6(1:na, 1:na))
           allocate(tau21(1:na, 1:na))
           
           tau0 = h11
+          tau1 = y**2
 
-          do a=1, na
-              do b=1, na
+          !$omp parallel default(shared)
+          !$omp do schedule(static)
+          do b=1, na
+              tau1(b) = tau1(b) - x(b)*y(b)*s1(b,b)
+              do a=1, na
                   tau0(a,b) = tau0(a,b) + 2.0_pr*Sum(s1*h221(a,:,b,:))
                   tau6(a,b) = 2.0_pr*Sum(s1*h13(:,:,a,b))
                   tau4(a,b) = 4.0_pr*Sum(s1*h221(:,a,:,b))
               end do
           end do
+          !$omp end do
 
-          r0 = -Sum(s1*tau0)/2.0_pr
-
+          !$omp single
+          r0 = - Sum(s1*tau0)/2.0_pr
           tau21 = -tau6
+          !$omp end single 
 
-          do a=1, na
-              do b=1, na
+          !$omp do schedule(static)
+          do b=1, na
+              do a=1, na
                   r1(a,b) = Sum(tau4*s2(a,:,:,b))/2.0_pr
               end do
           end do
+          !$omp end do
 
-          deallocate(tau0)
+          !$omp single
+          deallocate(tau0, tau1)
           allocate(tau5(1:na, 1:na))
           allocate(tau22(1:na, 1:na))
 
@@ -112,27 +125,22 @@
           tau6 = tau6 - tau5 + h02
           tau21 = tau21 + tau5
           tau22 = MatMul(tau4,Transpose(s1))
-
-          do a=1, na
-              do b=1, na
-                  tau6(a,b) = tau6(a,b) + &
-                      2.0_pr*Sum(h221(:,:,a,:)*s2(:,:,:,b))
-              end do
-          end do
-
+          Call Atran_dot_B(-2.0_pr*h221,s2,tau6,na**3,na,na)
           r1 = r1 - MatMul(s1,tau6)/2.0_pr
-
           deallocate(tau4, tau5, tau6)
           allocate(tau8(1:na, 1:na))
-
           scr4 = 0.0_pr
+          !$omp end single
 
+          !$omp do schedule(static)
           do a=1, na
               do b=1, na
                   tau8(a,b) = -2.0_pr*Sum(s1*h31(:,a,:,b))
               end do
           end do
+          !$omp end do
 
+          !$omp do schedule(static)
           do a=1, na
               do b=1, na
                   do c=1, na
@@ -144,15 +152,12 @@
                   end do
               end do
           end do
+          !$omp end do
+          !$omp end parallel
+
 
           tau8 = tau8 + h20
-
-          do a=1, na
-              do b=1, na
-                  tau8(a,b) = tau8(a,b) + 2.0_pr * Sum(&
-                      h221(a,:,:,:)*s2(:,b,:,:))
-              end do
-          end do
+          Call A_dot_Btran(-2.0_pr*h221,s2,tau8,na,na**3,na)
 
           r1 = r1 - MatMul(Transpose(tau8),s1)/2.0_pr
 
@@ -183,49 +188,79 @@
           tau16 = h04
 
           !$omp parallel default(shared)
+          !$omp single
+          Call A_dot_Btran(h221,s2,tau13,na**2,na**2,na**2)
+          !$omp end single nowait
+          
+          !$omp single
+          Call A_dot_Btran(h221,s1,tau11,na**3,na,na)
+          !$omp end single nowait
+          
+          !$omp single
+          Call Atran_dot_B(2.0_pr*h221,s1,tau14,na,na**3,na)
+          !$omp end single nowait
+          
+          !$omp single
+          Call Atran_dot_B(h13,s1,tau16,na,na**3,na)
+          !$omp end single nowait
+          
+          !$omp single
+          Call Atran_dot_B(h31,s1,tau17,na,na**3,na)
+          !$omp end single
+
+          !$omp single
+          Call Atran_dot_B(h04,Transpose(s1),tau23,na,na**3,na)
+          Amat = 0.0_pr
+          Bmat = 0.0_pr
+          Cmat = 0.0_pr
+          Dmat = 0.0_pr
+          !$omp end single
+
           !$omp do schedule(static)
           do a=1, na
               do b=1, na
-                  do c=1, na
-                      do d=1, na
-                          tau13(a,b,c,d) = Sum(&
-                              h221(a,b,:,:)*s2(c,d,:,:))
-                          tau11(a,b,c,d) = Sum(&
-                              s1(d,:)*h221(a,b,c,:))
-                          tau14(a,b,c,d) = tau14(a,b,c,d) + &
-                              2.0_pr * Sum(s1(:,d)*h221(:,a,b,c))
-                          tau16(a,b,c,d) = tau16(a,b,c,d) + &
-                              Sum(s1(:,d)*h13(:,a,b,c))
-                          tau17(a,b,c,d) = Sum(&
-                              s1(:,d)*h31(:,a,b,c)) + Sum(&
-                              h221(a,:,b,:)*s2(:,c,:,d))
-                          tau19(a,b,c,d) = - h222(d,c,a,b) + &
-                              Sum(s1(d,:)*h13(a,:,b,c))
-                          tau23(a,b,c,d) = h13(d,b,c,a) + Sum(&
-                              s1(d,:)*h04(:,a,b,c))
-                      end do
-                  end do
+                  amat(a,b,:,:) = h221(a,:,b,:)
+                  bmat(a,b,:,:) = s2(:,a,:,b)
+                  tau19(a,b,:,:) = tau19(a,b,:,:)-Transpose(h222(:,:,a,b))
+                  tau23(a,b,:,:) = tau23(a,b,:,:)+Transpose(h13(:,b,:,a))
+                  Cmat(a,b,:,:) = Transpose(h13(a,:,b,:))
               end do
           end do
           !$omp end do
-          !$omp end parallel
 
+          !$omp single
+          Call A_dot_Btran(Amat,Bmat,tau17,na**2,na**2,na**2)
+          !$omp end single nowait
+          
+          !$omp single
+          Call A_dot_Btran(Cmat,s1,tau19,na**3,na,na)
+          !$omp end single nowait
+          
+          !$omp single
+          Call Atran_dot_B(2.0_pr*h221,s2,tau21,na**3,na,na)
+          !$omp end single nowait
+          
+          !$omp single
+          Call A_dot_Btran(2.0_pr*h221,s2,tau22,na,na**3,na)
+          !$omp end single
+
+          !$omp do schedule(static)
           do a=1, na
               do b=1, na
                   tau18(a,b,:,:) = Transpose(tau13(a,b,:,:))
-                  tau21(a,b) = tau21(a,b) + 2.0_pr*Sum(&
-                      h221(:,:,:,a)*s2(:,:,:,b))
-                  tau22(a,b) = tau22(a,b) + 2.0_pr*Sum(&
-                      h221(:,a,:,:)*s2(:,b,:,:))
               end do
           end do
+          !$omp end do
 
+          !$omp single
           tau11 = tau11 + h31
           tau13 = tau13 + 2.0_pr * h40
           tau21 = tau21 - h02
           tau22 = tau22 - h20
 
-          !$omp parallel default(shared)
+          allocate(tau20(1:na, 1:na, 1:na, 1:na))
+          !$omp end single
+
           !$omp do schedule(static)
           do a=1, na
               do b=1, na
@@ -238,6 +273,13 @@
                               ) - h222(c,d,a,b)
                       end do
                   end do
+              end do
+          end do
+          !$omp end do
+
+          !$omp do schedule(static)
+          do a=1, na
+              do b=1, na
                   tau13(a,b,:,:) = tau13(a,b,:,:) + &
                       2.0_pr * Transpose(tau12(a,b,:,:))
                   tau18(a,b,:,:) = tau18(a,b,:,:) + &
@@ -246,23 +288,12 @@
               end do
           end do
           !$omp end do
-          !$omp end parallel
 
-          allocate(tau20(1:na, 1:na, 1:na, 1:na))
-
-          !$omp parallel default(shared)
           !$omp do schedule(static)
           do a=1, na
               do b=1, na
                   do c=1, na
                       do d=1, na
-                          scr4(a,b,c,d) = scr4(a,b,c,d) - &
-                              Sum(s2(:,:,c,d)*tau13(:,:,a,b))/8.0_pr + &
-                              Sum(s2(:,b,:,d)*tau15(:,:,a,c))/2.0_pr - &
-                              Sum(s2(a,b,:,:)*tau16(:,:,c,d))/4.0_pr + &
-                              Sum(s2(:,a,:,d)*tau17(:,:,b,c)) + &
-                              Sum(tau21(:,c)*s2(a,b,:,d))/4.0_pr + &
-                              Sum(tau22(:,a)*s2(:,b,c,d))/4.0_pr
                           tau20(a,b,c,d) = Sum(&
                               s1(:,b)*tau18(:,c,d,a)) + 2.0_pr*Sum(&
                               s1(d,:)*tau19(c,:,b,a))
@@ -271,9 +302,51 @@
               end do
           end do
           !$omp end do
-          !$omp end parallel
 
-          !$omp parallel default(shared)
+          !$omp single
+          Call Atran_dot_B(-tau13/8.0_pr,s2,scr4,na**2,na**2,na**2)
+          Call A_dot_B(-s2/4.0_pr,tau16,scr4,na**2,na**2,na**2)
+          Amat = 0.0_pr
+          Bmat = 0.0_pr
+          Cmat = 0.0_pr
+          Dmat = 0.0_pr
+          !$omp end single
+
+          !$omp do schedule(static)
+          do a=1, na
+              do b=1, na
+                  Amat(a,b,:,:) = s2(:,a,:,b)
+                  Bmat(:,:,a,b) = tau15(:,:,a,b)/2.0_pr
+                  Dmat(:,:,a,b) = tau17(:,:,a,b)
+              end do
+          end do
+          !$omp end do
+
+          !Here we generate:    Cmat(abcd) = s2(:,a,:,b)*tau15(:,:,c,d)
+          !     but we want:    Cmat(bdac)
+          !Similarly,      :    Bmat(abcd) = s2(:,a,:,b)*tau17(:,:,c,d)
+          !     but we want:    Bmat(adbc)
+          !Similarly,      :    Dmat(abcd) = -s2(a,b,c,:)*tau21(:,d) / 4.0_pr
+          !     but we want:    Dmat(abdc)
+
+          !$omp single
+          Call Atran_dot_B(tau22/4.0_pr,s2,scr4,na,na,na**3)
+          Call A_dot_B(Amat,Bmat,Cmat,na**2,na**2,na**2)
+          Bmat = 0.0_pr
+          Call A_dot_B(Amat,Dmat,Bmat,na**2,na**2,na**2)
+          Dmat = 0.0_pr
+          Call A_dot_B(s2,tau21/4.0_pr,Dmat,na**3,na,na)
+          !$omp end single
+
+          !$omp do schedule(static)
+          do a=1, na
+              do b=1, na
+                  scr4(a,b,:,:) = scr4(a,b,:,:) + Transpose(Cmat(b,:,a,:)) &
+                      + Transpose(Bmat(a,:,b,:)) - Transpose(Dmat(a,b,:,:))
+              end do
+          end do
+          !$omp end do
+           
           !$omp do schedule(static)
           do a=1, na
               do b=1, na
@@ -282,14 +355,14 @@
                           scr4(a,b,c,d) = scr4(a,b,c,d) - Sum(&
                               s1(:,d)*tau20(a,c,:,b))/4.0_pr - Sum(&
                               s1(b,:)*tau23(:,c,d,a))/2.0_pr - Sum(&
-                              s1(:,c)*h31(a,b,d,:))/2.0_pr
+                              s1(:,c)*h31(a,b,d,:))/2.0_pr 
                       end do
                   end do
               end do
           end do
           !$omp end do
-          !$omp end parallel
 
+          !$omp single
           deallocate(&
               tau11, tau12, tau13, tau14, tau15, tau16, tau17, tau18, &
               tau19, tau20, tau21, tau22, tau23 &
@@ -300,12 +373,15 @@
           scr4 = scr4 - h221/2.0_pr
           r2 = 0.0_pr
 
+          Call A_dot_B(-h222/2.0_pr,s1,r1,na**2,na**2,1)
+          Call Atran_dot_B(h31/2.0_pr,s2,r1,na**3,na,na)
+          Call A_dot_B(s2/2.0_pr,h13,r1,na,na**3,na)
+          !$omp end single
+
+          !$omp do schedule(static)
           do a=1, na
               do b=1, na
-                  r1(a,b) = r1(a,b) + Sum(h11*s2(a,:,:,b))/2.0_pr - &
-                      Sum(s1*h222(a,b,:,:))/2.0_pr + &
-                      Sum(h31(:,:,:,a)*s2(:,:,:,b))/2.0_pr - &
-                      Sum(h13(:,:,:,b)*s2(:,a,:,:))/2.0_pr
+                  r1(a,b) = r1(a,b) + Sum(h11*s2(a,:,:,b))/2.0_pr
                   do c=1, na
                       do d=1, na
                           r2(a,b,c,d) = scr4(a,b,c,d) - scr4(b,a,c,d) &
@@ -314,8 +390,12 @@
                   end do
               end do
           end do
+          !$omp end do
 
+          !$omp single
           Energy = -2.0_pr*(r0 + Sum(Z1*r1) + Sum(Z2*r2))
+          !$omp end single 
+          !$omp end parallel
 
       End Subroutine EvalEnergy
 
@@ -701,3 +781,66 @@
           Energy = -2.0_pr*(R0 + Sum(Z1*R1) + Sum(Z2*R2))
 
       End Subroutine EvalTwoBodyH
+
+      Subroutine A_dot_B(A,B,C,MA,NA,NB)
+          ! Subroutine performs the following Matrix Multiplication
+          !
+          !      C = C + A . B
+          ! 
+          !  where A is of dimension (MA,NA)
+          !    and B is of dimension (MB,NB)
+          ! Obviously, NB = NA
+           Implicit None
+           Integer, parameter  :: pr = Selected_Real_Kind(15,307)
+           Integer, Intent(In)           ::  MA,NA,NB
+           Real (Kind=pr), Intent(In)    ::  A(MA,NA), B(NA,NB)
+           Real (Kind=pr), Intent(InOut) ::  C(MA,NB)
+
+           !C = C + MatMul(A,B)
+           Call DGEMM('N','N',MA,NB,NA,1.0_pr,A,MA,B,NA,1.0_pr,C,MA)
+
+           Return
+
+      End Subroutine A_dot_B
+
+      Subroutine A_dot_Btran(A,B,C,MA,NA,MB)
+          ! Subroutine performs the following Matrix Multiplication
+          !
+          !      C = C + A . B^transpose
+          ! 
+          !  where A is of dimension (MA,NA)
+          !    and B is of dimension (MB,NB)
+          ! Obviously, NB = NA
+           Implicit None
+           Integer, parameter  :: pr = Selected_Real_Kind(15,307)
+           Integer, Intent(In)           ::  MA,NA,MB
+           Real (Kind=pr), Intent(In)    ::  A(MA,NA), B(MB,NA)
+           Real (Kind=pr), Intent(InOut) ::  C(MA,MB)
+
+           !C = C + MatMul(A,Transpose(B))
+           Call DGEMM('N','T',MA,MB,NA,1.0_pr,A,MA,B,MB,1.0_pr,C,MA)
+
+           Return
+
+      End Subroutine A_dot_Btran 
+
+      Subroutine Atran_dot_B(A,B,C,NA,MA,NB)
+          ! Subroutine performs the following Matrix Multiplication
+          !
+          !      C = C + A^transpose . B
+          ! 
+          !  where A is of dimension (NA,MA)
+          !    and B is of dimension (MB,NB)
+          ! Obviously, MB = NA
+           Implicit None
+           Integer, parameter  :: pr = Selected_Real_Kind(15,307)
+           Integer, Intent(In)           ::  MA,NA,NB
+           Real (Kind=pr), Intent(In)    ::  A(NA,MA), B(NA,NB)
+           Real (Kind=pr), Intent(InOut) ::  C(MA,NB)
+
+           !C = C + MatMul(Transpose(A),B)
+           Call DGEMM('T','N',MA,NB,NA,1.0_pr,A,NA,B,NA,1.0_pr,C,MA)
+
+           Return
+
+      End Subroutine Atran_dot_B
