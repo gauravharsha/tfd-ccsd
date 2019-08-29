@@ -4,7 +4,7 @@ sys.path.append('../fort_src/')
 import h5py, time, numpy as np
 
 from scipy.integrate import ode
-from scipy.misc import comb
+from scipy.special import comb
 from numba import jit, njit
 
 from iofuncs import *
@@ -669,10 +669,10 @@ class Evolution(IOps):
         self.ci_amps = np.zeros(1+len_t1+len_t2)
 
         # ODE integrators
-        self.cc_beta_integrator = ode(cc_beta_evolve).set_integrator('vode', method='bdf',rtol=self.deqtol)
-        self.ci_beta_integrator = ode(ci_beta_evolve).set_integrator('vode', method='bdf',rtol=self.deqtol)
-        self.cc_alpha_integrator = ode(cc_alpha_evolve).set_integrator('vode', method='bdf',rtol=self.deqtol)
-        self.ci_alpha_integrator = ode(ci_alpha_evolve).set_integrator('vode', method='bdf',rtol=self.deqtol)
+        self.cc_beta_integrator = ode(cc_beta_evolve).set_integrator('dopri5',rtol=self.deqtol)
+        self.ci_beta_integrator = ode(ci_beta_evolve).set_integrator('dopri5',rtol=self.deqtol)
+        self.cc_alpha_integrator = ode(cc_alpha_evolve).set_integrator('dopri5',rtol=self.deqtol)
+        self.ci_alpha_integrator = ode(ci_alpha_evolve).set_integrator('dopri5',rtol=self.deqtol)
 
 
     def setUpInts(self):

@@ -1,9 +1,9 @@
 # Input File for Covariant Thermal Coupled Cluster
 
-HDF File containing integrals   :   ./input/h2_074ang_ccpvtz_data.h5
+HDF File containing integrals   :   ./input/h2_074ang_sto3g_data.h5
 Number of electrons             :   2
-Final Beta value                :   0.01
-Number of Beta points           :   11
-Precision in Number             :   1e-6
-Precision in Diff Eqn Evolve    :   1e-8
+Final Beta value                :   20
+Number of Beta points           :   201
+Precision in Number             :   1e-4
+Precision in Diff Eqn Evolve    :   1e-6
 Nuclear Repulsion               :   0.7151043

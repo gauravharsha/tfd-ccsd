@@ -3,7 +3,7 @@ sys.path.append('../src/')
 sys.path.append('../fort_src/')
 
 import pytest, h5py, numpy as np
-from scipy.misc import comb
+from scipy.special import comb
 
 from iofuncs import *
 from inttran import *

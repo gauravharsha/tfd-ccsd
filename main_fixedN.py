@@ -5,7 +5,7 @@ sys.path.append('./input/')
 
 import numpy as np, h5py
 from scipy.integrate import ode
-from scipy.misc import comb
+from scipy.special import comb
 from multiprocessing import Pool
 
 from iofuncs import *

@@ -8,7 +8,7 @@ mu = float(sys.argv[1])
 
 import numpy as np, h5py
 from scipy.integrate import ode
-from scipy.misc import comb
+from scipy.special import comb
 from multiprocessing import Pool
 
 from iofuncs import *
@@ -66,7 +66,7 @@ def main():
 
     # Integrals
     eigs = evol.eigs
-    h1 = evol.h1
+    h1 = evol.h1*1.0
     eri = evol.eri
 
     # Fix the chemical potential
