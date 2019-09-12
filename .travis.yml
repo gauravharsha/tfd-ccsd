@@ -1,18 +1,28 @@
 language: python
 
-sudo: required
-dist: trusty
-
-python:
-    - 3.6
-
 before_install:
-    - sudo apt-get install -y --allow-unauthenticated python-h5py python-dev python-numpy python-scipy python-jinja2 
-    - pip install h5py
+
+  - wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
+  - chmod +x miniconda.sh
+  - ./miniconda.sh -b
+  - export PATH=/home/travis/miniconda/bin:$PATH
+  - conda update --yes conda
+
+
+install:
+
+  # We just set up a conda environment with the right Python version. This
+  # should not need changing.
+
+  - conda create --yes -n test python=$TRAVIS_PYTHON_VERSION
+  - source activate test
+  - conda install numpy, scipy, h5py
 
 script: 
-    - f2py -c --verbose --opt='-O3' -m ThermalCCSD ThermalCCSD.f90 --f90flags="-fopenmp" -lgomp
-    - f2py -c --verbose --opt='-O3' -m ThermalCISD ThermalCISD.f90 --f90flags="-fopenmp" -lgomp
-    - f2py -c --verbose --opt='-O3' -m ExpVals ExpVals.f90 --f90flags="-fopenmp" -lgomp    
-    - cd tests
-    - pytest
+  
+  - cd fort_src/
+  - f2py -c --verbose --opt='-O3' -m ThermalCCSD ThermalCCSD.f9# #--f90flags="-fopenmp" -lgomp
+  - f2py -c --verbose --opt='-O3' -m ThermalCISD ThermalCISD.f90 #--f90flags="-fopenmp" -lgomp
+  - f2py -c --verbose --opt='-O3' -m ExpVals ExpVals.f90 #--f90flags="-fopenmp" -lgomp    
+  - cd ../tests
+  - pytest --verbose
