@@ -39,12 +39,14 @@ def test_readintegrals():
 
     iops = IOps(inp_file='TestInput')
 
-    h1, eri, attrs = iops.loadHDF()
+    eigs, h1, eri, attrs = iops.loadHDF()
 
     f1 = h5py.File(iops.fn,'r')
+    true_eigs = f1['eigs'][:]
     true_h1 = f1['h1'][:]
     true_eri = f1['eri'][:]
 
+    assert eigs.all() == true_eigs.all()
     assert h1.all() == true_h1.all()
     assert eri.all() == true_eri.all()
 
@@ -70,7 +72,7 @@ def test_output():
     #
 
     iops = IOps(inp_file='TestInput')
-    h1, eri, attrs = iops.loadHDF()
+    eigs, h1, eri, attrs = iops.loadHDF()
 
     fout = h5py.File('test_output.h5','w')
 

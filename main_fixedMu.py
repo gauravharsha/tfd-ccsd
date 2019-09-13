@@ -3,6 +3,9 @@ sys.path.append('./fort_src/')
 sys.path.append('./src/')
 sys.path.append('./input/')
 
+global mu
+mu = float(sys.argv[1])
+
 import numpy as np, h5py
 from scipy.integrate import ode
 from scipy.special import comb
@@ -58,11 +61,20 @@ def main():
     deqtol = evol.deqtol
     e_nuc = evol.e_nuc
     fug = evol.fug
+    fug = 1.0
+    evol.fug = 1.0
 
     # Integrals
     eigs = evol.eigs
-    h1 = evol.h1
+    h1 = evol.h1*1.0
     eri = evol.eri
+
+    # Fix the chemical potential
+    global mu
+    evol.h1 -= mu*np.eye(nso)
+    evol.eigs -= mu
+
+    print('Chemical Potential set to: ',mu)
     
     input_time = time.time()
 
@@ -116,7 +128,7 @@ def main():
     #################################################################
     
     output_fn = evol.fn.replace('input','output')
-    output_fn = output_fn.replace('_data.h5','_tfd_ccsd.h5')
+    output_fn = output_fn.replace('_data.h5','_tfd_ccsd_fixedMu.h5')
 
     fout = h5py.File(output_fn,'w')
 
@@ -174,9 +186,6 @@ def main():
         evol.DoBetaIntegration()
 
         print('Beta = ',evol.beta_in)
-
-        # Do Alpha search and integration
-        evol.BisectionAndAlphaIntegrate()
 
         # New HFB parameters
         x = 1/np.sqrt( 1 + np.exp(-evol.beta_in*eigs + evol.alpha_in)*fug )

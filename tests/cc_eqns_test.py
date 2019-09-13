@@ -32,12 +32,8 @@ def test_cc_beta_residuals_zeroT():
 
     # Load the Integrals first
     iops = IOps(inp_file='TestInput')
-    h1, eri_in, attrs = iops.loadHDF()
+    eigs, h1, eri, attrs = iops.loadHDF()
     nso = iops.nso
-
-    # Next do the IntTran2
-    hdiag, evecs = IntTran2(h1)
-    eri = IntTran4(eri_in,evecs)
 
     # Construct t1 and t2 = use Tom's MasterCode
     nocc = 6
@@ -47,7 +43,7 @@ def test_cc_beta_residuals_zeroT():
     t1 = np.einsum('ia->ai',t1_pre)
 
     t2 = np.loadtxt('T2AMP')
-    t2_pre = eri_in*0
+    t2_pre = eri*0
     m = 0
     for i in range(nocc):
         for j in range(nocc):
@@ -56,10 +52,6 @@ def test_cc_beta_residuals_zeroT():
                 m += 1
     t2 = np.einsum('ijab->abij',t2_pre)
 
-    # Transform the basis
-    s1 = np.transpose(evecs) @ t1 @ evecs
-    s2 = IntTran4(t2,evecs)
-
     # Other parameters needed for residuals
     y = np.zeros(nso)
     for i in range(nocc):
@@ -67,7 +59,7 @@ def test_cc_beta_residuals_zeroT():
     x = np.sqrt(1 - y**2)
 
     # Get the residuals
-    r0, r1, r2 = betacc(hdiag, eri, s1, s2, x, y)
+    r0, r1, r2 = betacc(eigs, h1, eri, t1, t2, x, y)
     r1 = np.einsum('pq,p,q->pq',r1,x,y)
     r2 = np.einsum('pqrs,p,q,r,s->pqrs',r2,x,x,y,y)
 
@@ -88,12 +80,8 @@ def test_cc_mu_residuals_zeroT():
 
     # Load the Integrals first
     iops = IOps(inp_file='TestInput')
-    h1, eri_in, attrs = iops.loadHDF()
+    eigs, h1, eri, attrs = iops.loadHDF()
     nso = iops.nso
-
-    # Next do the IntTran2
-    hdiag, evecs = IntTran2(h1)
-    eri = IntTran4(eri_in,evecs)
 
     # Construct t1 and t2 = use Tom's MasterCode
     nocc = 6
@@ -103,7 +91,7 @@ def test_cc_mu_residuals_zeroT():
     t1 = np.einsum('ia->ai',t1_pre)
 
     t2 = np.loadtxt('T2AMP')
-    t2_pre = eri_in*0
+    t2_pre = eri*0
     m = 0
     for i in range(nocc):
         for j in range(nocc):
@@ -112,10 +100,6 @@ def test_cc_mu_residuals_zeroT():
                 m += 1
     t2 = np.einsum('ijab->abij',t2_pre)
 
-    # Transform the basis
-    s1 = np.transpose(evecs) @ t1 @ evecs
-    s2 = IntTran4(t2,evecs)
-
     # Other parameters needed for residuals
     y = np.zeros(nso)
     for i in range(nocc):
@@ -123,7 +107,7 @@ def test_cc_mu_residuals_zeroT():
     x = np.sqrt(1 - y**2)
 
     # Get the residuals
-    r0, r1, r2 = numbercc(s1, s2, x, y)
+    r0, r1, r2 = numbercc(t1, t2, x, y)
     r1 = np.einsum('pq,p,q->pq',r1,x,y)
     r2 = np.einsum('pqrs,p,q,r,s->pqrs',r2,x,x,y,y)
 
