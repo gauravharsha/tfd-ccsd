@@ -56,6 +56,12 @@ def test_cc_beta_residuals_zeroT():
     r0, r1, r2 = betacc(eigs, h1, eri, t1, t2, x, y)
     r1 = np.einsum('pq, p, q->pq', r1, x, y)
     r2 = np.einsum('pqrs, p, q, r, s->pqrs', r2, x, x, y, y)
+    r2 = (
+        r2
+        - np.einsum('baij->abij', r2)
+        - np.einsum('abji->abij', r2)
+        + np.einsum('baji->abij', r2)
+    ) / 4
 
     # First check the shapes of r0, r1, r2
     assert type(r0) == float
