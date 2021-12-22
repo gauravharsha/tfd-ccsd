@@ -1,5 +1,5 @@
 import numpy as np
-from tfdcccsd.iofuncs import IOps
+from tfdccsd.iofuncs import IOps
 from tfdccsd.ThermalCCSD import betacc, numbercc
 
 #####################################################################
