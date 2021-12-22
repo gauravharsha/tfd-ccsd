@@ -5,7 +5,7 @@ Python package for computing grand-canonical ensemble properties of many-body fe
 
 > Thermofield Theory for Finite-Temperature Coupled Cluster, G. Harsha, T. M. Henderson, and G. E. Scuseria, [J. Chem. Theory Comput. 15, 6127-6136 (2019)](https://pubs.acs.org/doi/10.1021/acs.jctc.9b00744) [arXiv](https://arxiv.org/abs/1907.11286)
 
-This code performs the imaginary time evolution in the interaction picture, i.e. using the covariant coupled cluster ansatz. A fixed-reference version can be formulated by tweaking the evolution equations here and there but is not explicitly included in this repository.
+This code performs the imaginary time evolution in the interaction picture, i.e., using the covariant coupled cluster ansatz. A fixed-reference version can be formulated by tweaking the evolution equations here and there but is not explicitly included in this repository.
 
 ## Requirements
 
