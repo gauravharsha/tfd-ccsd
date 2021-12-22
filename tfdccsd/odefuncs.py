@@ -2,7 +2,7 @@ import numpy as np
 from scipy.integrate import ode
 from scipy.special import comb
 from numba import jit
-from iofuncs import IOps
+from .iofuncs import IOps
 from .ThermalCCSD import betacc, numbercc
 from .ThermalCISD import betaci, numberci
 from .ExpVals import evalnumber, evalenergy
